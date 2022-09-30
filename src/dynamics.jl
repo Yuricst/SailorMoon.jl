@@ -43,5 +43,5 @@ Right-hand side expression for state-vector in BCR4BP
     - `p`: parameters, where p = [μ, θ0, ωM]
     - `t`: time
 """
-function rhs_cr3bp!(du,u,p,t)
+function rhs_bcr4bp!(du,u,p,t)
 end

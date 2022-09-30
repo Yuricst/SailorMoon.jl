@@ -5,7 +5,7 @@ Test for dynamics
 using DifferentialEquations
 using Plots
 
-include("../src/SailorMoon.jl")
+include("../src/SailorMoon.jl")   # relative path to main file of module
 
 mu = 0.012150585609624
 state0 = [8.3203900980615830e-1, 0.0, 1.2603694134707036e-1, 0.0, 2.4012675449219933e-1, 0.0]
