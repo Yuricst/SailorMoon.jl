@@ -7,5 +7,4 @@ using DifferentialEquations
 include("dynamics.jl")
 
 
-
 end # module

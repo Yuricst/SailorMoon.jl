@@ -40,12 +40,16 @@ Right-hand side expression for state-vector in BCR4BP
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
     - `u`: state-vector
-    - `p`: parameters, where p = [μ1, μ2, as,  θ0, ωM]
-        m* : mE + mL
-        μ1 : mL / m*
-        μ2 : mS / m*
-        l* : Earth-moon distance
-        as : (sun-B1 distance) / l*
+    - `p`: parameters, where p = [μ1, μ2, as, ωM, τ, β, γ]
+        m* : mE + mL (6.0455 * 10^22)
+        μ1 : mL / m* (0.012150585609624)
+        μ2 : mS / m* (0.00000303951)
+        as : (sun-B1 distance) / l* (388.709677419)
+            l* : Earth-moon distance (384,400 km)
+        ωM : Earth-Moon line's angular velocity around E-M barycenter
+        τ  : thrust magnitude (0~1)
+        β  : thrust angle 1
+        γ  : thrust angle 2
     - `t`: time
 """
 function rhs_bcr4bp!(du,u,p,t)
@@ -53,6 +57,7 @@ function rhs_bcr4bp!(du,u,p,t)
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ1, μ2, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
+
     θ = θ0 + ωM * t
 
     # compute distances
