@@ -40,8 +40,37 @@ Right-hand side expression for state-vector in BCR4BP
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
     - `u`: state-vector
-    - `p`: parameters, where p = [μ, θ0, ωM]
+    - `p`: parameters, where p = [μ1, μ2, as,  θ0, ωM]
+        m* : mE + mL
+        μ1 : mL / m*
+        μ2 : mS / m*
+        l* : Earth-moon distance
+        as : (sun-B1 distance) / l*
     - `t`: time
 """
 function rhs_bcr4bp!(du,u,p,t)
+    # unpack state
+    x, y, z = u[1], u[2], u[3]
+    vx, vy, vz = u[4], u[5], u[6]
+    μ1, μ2, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
+    θ = θ0 + ωM * t
+
+    # compute distances
+    r30 = sqrt((as - x)^2 + y^2 + z^2)
+    r31 = sqrt((-μ1*cos(θ) - x)^2 + (-μ1*sin(θ) - y)^2 + z^2)
+    r32 = sqrt(((1-μ1)*cos(θ) - x)^2 + ((1-μ1)*sin(θ) - y)^2 + z^2)
+
+    # derivatives of positions
+    du[1] = u[4]
+    du[2] = u[5]
+    du[3] = u[6]
+    
+    # forces applied (Sun, Earth, Moon, and thrust term)
+    Fx = μ2 / r30^3 * (-as - x) + (1-μ1) / r31^3 * (-μ1*cos(θ) - x)    + μ1 / r32^3 * ((1-μ1)*cos(θ) - x) + Tx
+    Fy = μ2 / r30^3 * (-y)      + (1-μ1) / r31^3 * (-μ1*sin(θ) - y)    + μ1 / r32^3 * ((1-μ1)*sin(θ) - y) + Ty
+    Fz = μ2 / r30^3 * (-z)      + (1-μ1) / r31^3 * (-z)                 + μ1 / r32^3 * (-z)               + Tz
+
+    du[4] = 2*vy  + x + Fx
+    du[5] = -2*vx + y + Fy
+    du[6] =             Fz
 end
