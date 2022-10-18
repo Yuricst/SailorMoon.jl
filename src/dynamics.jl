@@ -18,6 +18,7 @@ function rhs_cr3bp!(du,u,p,t)
     # unpack state
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
+
     # compute distances
     r1 = sqrt( (x+p[1])^2 + y^2 + z^2 );
     r2 = sqrt( (x-1+p[1])^2 + y^2 + z^2 );
@@ -40,7 +41,7 @@ Right-hand side expression for state-vector in BCR4BP
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
     - `u`: state-vector
-    - `p`: parameters, where p = [μ1, μ2, as, ωM, τ, β, γ]
+    - `p`: parameters, where p = [μ1, μ2, as, θ0, ωM, τ, β, γ]
         m* : mE + mL (6.0455 * 10^22)
         μ1 : mL / m* (0.012150585609624)
         μ2 : mS / m* (0.00000303951)
@@ -48,8 +49,8 @@ Right-hand side expression for state-vector in BCR4BP
             l* : Earth-moon distance (384,400 km)
         ωM : Earth-Moon line's angular velocity around E-M barycenter
         τ  : thrust magnitude (0~1)
-        β  : thrust angle 1
-        γ  : thrust angle 2
+        γ  : thrust angle 1
+        β  : thrust angle 2
     - `t`: time
 """
 function rhs_bcr4bp!(du,u,p,t)
@@ -57,8 +58,13 @@ function rhs_bcr4bp!(du,u,p,t)
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ1, μ2, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
+    τ, γ, β = p[6], p[7], p[8]
 
     θ = θ0 + ωM * t
+
+    # create Thrust term 
+    T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
+    Tx = T[1], T[2], T[3]
 
     # compute distances
     r30 = sqrt((as - x)^2 + y^2 + z^2)
