@@ -2,12 +2,13 @@
 Generate fitness function
 """
 function get_fitness()
-    # number of constraints FIXME ... chekc if this is correct!
+    # number of constraints FIXME ... check if this is correct!
     ng = 7
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
-        # unpack decision vector
+        # unpack decision vector & residual
+        
 
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize

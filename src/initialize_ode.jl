@@ -49,7 +49,21 @@ Providing the terminal state of the SC
 """
 
 function set_terminal_state(ϕ, θ2)
+    x0_lpo, period_lpo, monodromy = duh_function()
 
+    # propagate the periodic orbit until ϕT.
+    x_t, stm_t = propagate(x0_lpo, ϕ*period_lpo)
+
+    # add varation based on the eigenvector 
+    ϵ = 1e-6   # koshiki_nanndakke()
+
+    # get eigenvector for the stable manifold
+    v_stb = get_eigenvector(monodromy, stable::True)
+
+    state_f1 = x_t + ϵ * v_stb * norm(v_stb)
+    state_f2 = x_t - ϵ * v_stb * norm(v_stb)
+
+    # coodinate transformation
 
     return state_f
 end

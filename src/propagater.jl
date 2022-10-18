@@ -85,6 +85,6 @@ function sf_propagate(
 
     # take the residual 
     res = get_residual(state0, statef)
-
+    
     return res, state_fwd, state_bkwd, sol_fwd, sol_bkwd
 end
