@@ -2,6 +2,8 @@
 Initial & Terminal condition
 """
 
+include("../../julia-R3BP/R3BP/src/librationpointorbit/lpo_family.jl")
+
 """
 
 Providing the initial state of the SC
@@ -33,6 +35,9 @@ Providing the terminal state of the SC
 """
 
 function set_terminal_state(ϕ, θ2)
+    # what is moon and Earth ID? 
+    construct_arrival_condition(ACDict="lpo2", arrival_ID::Int, center_body_ID::Int)
+
 
     return state_f
 end

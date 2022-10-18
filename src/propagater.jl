@@ -55,4 +55,9 @@ for i in 1:n
     push!(state0, sol)
 end 
 
+# take the residual 
+
+
+
+
 
