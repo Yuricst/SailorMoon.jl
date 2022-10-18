@@ -21,7 +21,8 @@ function sf_propagate(
     mf::Float64,
     n::Int,
     Propagator::ODEPropagator,
-    SFset::SimsFlanaganSettings
+    SFset::SimsFlanaganSettings,
+    param3b::Vector{Float64}
 )
 
     # FIXME unpack parameters
@@ -43,7 +44,8 @@ function sf_propagate(
     # forward propagation
     # set up the initial state
     state_fwd = zeros(7, n+1)
-    state0 = initialize_ode.set_initial_state(c_launch[3], c_launch[4], c_launch[5], c_launch[6])
+    param3b = [μ1,r0]
+    state0 = initialize_ode.set_initial_state(param3b, c_launch[3:5], c_launch[6])
     state_fwd[:,1] = vcat(state0, m0)
     sol_fwd = []
     for i in 1:n 
