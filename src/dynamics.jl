@@ -63,6 +63,8 @@ function rhs_bcr4bp!(du,u,p,t)
     θ = θ0 + ωM * t
 
     # create Thrust term 
+    # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
+    #        in the future
     T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
     Tx = T[1], T[2], T[3]
 
