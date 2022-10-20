@@ -34,7 +34,7 @@ function dyanmics_parameters()
     as    = 1.000003 * 1.495978707e8 / lstar
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml   = 2π/(t_sidereal/tstar)     # rad/[canonical time]
+    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
     return dynamics_params(
         mu1, mu2, mus, lstar, tstar, as, oms, oml
     )

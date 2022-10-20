@@ -6,18 +6,17 @@ Generate fitness function
 
 """
 function get_fitness(
-    p::Vector{Float64}
+    p::Vector{Float64},
+    Propagator::ODEPropagator,
+    n::Int=20,
 )
     # number of constraints FIXME ... check if this is correct!
     ng = 7
 
-    # number of sft discretization 
-    n = 20
-
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res, _, _, _, _ = sf_propagate(x,p,n,Propagator) 
+        res, _, _, _, _ = sf_propagate(x,p,n,Propagator)
 
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
