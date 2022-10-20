@@ -16,10 +16,8 @@ n = 20  # segmentation of the SF transcription per arc
 
 
 function sf_propagate(
-    x::Vector{Float64},
+    x::AbstractVector{Float64},
     p::Vector{Float64},
-    m0::Float64,
-    mf::Float64,
     n::Int,
     Propagator::ODEPropagator,
     SFset::SimsFlanaganSettings,
@@ -50,7 +48,7 @@ function sf_propagate(
     state_fwd = zeros(7, n+1)
     param3b = [μ2,r0]
     state0 = initialize_ode.set_initial_state(param3b, c_launch[3:5], c_launch[6])
-    state_fwd[:,1] = vcat(state0, m0)
+    state_fwd[:,1] = vcat(state0, c_launch[0])
     sol_fwd = []
     for i in 1:n 
         τ, γ, β = tau1[8+3*n:10+3*n]
@@ -70,7 +68,7 @@ function sf_propagate(
     # set up the terminal state
     state_bkwd = zeros(7, n+1)
     statef = initialize_ode.set_terminal_state(c_arr[3], c_arr[4], ωM)
-    state_bkwd[:,1] = vcat(statef, mf)
+    state_bkwd[:,1] = vcat(statef, c_arr[0])
     sol_bkwd = []
 
     for i in 1:n
