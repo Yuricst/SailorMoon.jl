@@ -24,7 +24,7 @@ function dyanmics_parameters()
     gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
     gm_sun = 1.3271244004193938E+11   # GM of Sun
 
-    t_sidereal = 27.3217*86400        # sec
+    t_sidereal = 27.3217  *86400        # sec
     t_synodic  = 29.530588*86400      # sec
 
     tstar = t_sidereal / (2π)         # sec

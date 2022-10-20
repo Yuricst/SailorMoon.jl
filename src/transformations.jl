@@ -39,3 +39,16 @@ Careful with sign of ωm!! (should be positive)
 """
 function transform_SunB1_to_EMrot(state, )
 end
+
+
+"""
+Transform state from Earth inertial frame to Earth-Moon rotating frame.
+Careful with sign of ωm!! (should be positive)
+"""
+function transform_earthIne_to_EMrot(state::Vector, θm::Real, ωm::Real)
+
+
+
+    
+    return state_conv
+end
