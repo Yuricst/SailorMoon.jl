@@ -17,6 +17,7 @@ n = 20  # segmentation of the SF transcription per arc
 
 function sf_propagate(
     x::Vector{Float64},
+    p::Vector{Float64},
     m0::Float64,
     mf::Float64,
     n::Int,
@@ -31,30 +32,33 @@ function sf_propagate(
     abstol = Propagator.abstol
     dt = Propagator.dt
 
+    μ2, μS, as, θ0, ωM, mdot = p
+
     # initial condition
     t0 = 0
 
     # extract optimization var
-    c_launch = x[1 : 6]   # Δt1, m0, v∞1, α1, δ1, θ1 
-    c_arr    = x[7 : 10]  # Δt2, m2, ϕ, θ2
-    tau1     = x[11 : (length(x)-10)/2 + 10]  # discretization numbers are the same for the first & second arc
-    tau2     = x[(length(x)-10)/2 + 11 : end]
+    tof      = x[1]
+    c_launch = x[2 : 6]  # m0, v∞1, α1, δ1, θ1 
+    c_arr    = x[7 : 9]  # m2, ϕ, θ2
+    tau1     = x[10 : (length(x)-9)/2 + 9]  # discretization numbers are the same for the first & second arc
+    tau2     = x[(length(x)-9)/2 + 10 : end]
     tf       = t0 + c_launch[1] + c_arr[1]
 
     # forward propagation
     # set up the initial state
     state_fwd = zeros(7, n+1)
-    param3b = [μ1,r0]
+    param3b = [μ2,r0]
     state0 = initialize_ode.set_initial_state(param3b, c_launch[3:5], c_launch[6])
     state_fwd[:,1] = vcat(state0, m0)
     sol_fwd = []
     for i in 1:n 
-        τ, β, γ = tau1[8+3*n:10+3*n]
-        params = [μ1, μ2, as, ωM, τ, β, γ]
-        tspan = [t0, t0 + c_launch[1]/n]
+        τ, γ, β = tau1[8+3*n:10+3*n]
+        params = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot]
+        tspan = [t0, t0 + tof/2/n]
 
         # construct ODE problem and solve
-        ode_prob = ODEProblem(dynamics.rhs_bcr4bp!, state0, tspan, params)
+        ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, state0, tspan, params)
         sol = solve(ode_prob, method, reltol=reltol, abstol=abstol)
         t0 = tspan[2]
         state0 = sol.u[end]
@@ -65,17 +69,17 @@ function sf_propagate(
     # backward propagation 
     # set up the terminal state
     state_bkwd = zeros(7, n+1)
-    statef = initialize_ode.set_terminal_state(c_arr[3], c_arr[4])
+    statef = initialize_ode.set_terminal_state(c_arr[3], c_arr[4], ωM)
     state_bkwd[:,1] = vcat(statef, mf)
     sol_bkwd = []
 
     for i in 1:n
-        τ, β, γ = tau2[end-3*n+1:end-3*n+3]
-        params = [μ1, μ2, as, ωM, τ, β, γ]
-        tspan = [tf, tf - c_arr[1]/n]
+        τ, γ, β = tau2[end-3*n+1:end-3*n+3]
+        params = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot]
+        tspan = [tf, tf - tof/2/n]
 
         # construct ODE problem and solve
-        ode_prob = ODEProblem(dynamics.rhs_bcr4bp!, statef, tspan, params)
+        ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, statef, tspan, params)
         sol = solve(ode_prob, method, reltol=reltol, abstol=abstol)
         tf = tspan[2]
         statef = sol.u[end]
