@@ -5,6 +5,14 @@ dynamics propagation (Sims-Flanagan Transcription)
 using DifferentialEquations
 using Plots
 
+abstract type AbstractPropagatorType end
+
+Base.@kwdef struct ODEPropagator <:
+    method=Tsit5()
+    reltol::Real=1e-12
+    abstol::Real=1e-12
+end
+
 include("dynamics.jl")
 include("initialize_ode.jl")
 
@@ -37,7 +45,7 @@ function sf_propagate(
 
     # extract optimization var
     tof      = x[1]
-    c_launch = x[2 : 6]  # m0, v∞1, α1, δ1, θ1 
+    c_launch = x[2 : 6]  # m0, v∞1, α1, δ1, θ1
     c_arr    = x[7 : 9]  # m2, ϕ, θ2
     tau1     = x[10 : (length(x)-9)/2 + 9]  # discretization numbers are the same for the first & second arc
     tau2     = x[(length(x)-9)/2 + 10 : end]
@@ -50,7 +58,7 @@ function sf_propagate(
     state0 = initialize_ode.set_initial_state(param3b, c_launch[3:5], c_launch[6])
     state_fwd[:,1] = vcat(state0, c_launch[0])
     sol_fwd = []
-    for i in 1:n 
+    for i in 1:n
         τ, γ, β = tau1[8+3*n:10+3*n]
         params = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot]
         tspan = [t0, t0 + tof/2/n]
@@ -64,7 +72,7 @@ function sf_propagate(
         push!(sol_fwd, sol)
     end
 
-    # backward propagation 
+    # backward propagation
     # set up the terminal state
     state_bkwd = zeros(7, n+1)
     statef = initialize_ode.set_terminal_state(c_arr[3], c_arr[4], ωM)
@@ -83,10 +91,10 @@ function sf_propagate(
         statef = sol.u[end]
         state_bkwd[:,i+1] = statef
         push!(sol_bkwd, sol)
-    end 
+    end
 
-    # take the residual 
+    # take the residual
     res = get_residual(state0, statef)
-    
+
     return res, state_fwd, state_bkwd, sol_fwd, sol_bkwd
 end
