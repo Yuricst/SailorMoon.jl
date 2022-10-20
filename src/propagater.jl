@@ -7,20 +7,11 @@ using Plots
 
 abstract type AbstractPropagatorType end
 
-Base.@kwdef struct ODEPropagator <:
+Base.@kwdef struct ODEPropagator <: AbstractPropagatorType
     method=Tsit5()
     reltol::Real=1e-12
     abstol::Real=1e-12
 end
-
-include("dynamics.jl")
-include("initialize_ode.jl")
-
-μ1 = 0.012150585609624
-μ2 = 0.00000303951
-as = 388.709677419
-ωM = 1  #???
-n = 20  # segmentation of the SF transcription per arc
 
 
 function sf_propagate(
@@ -36,7 +27,6 @@ function sf_propagate(
     method = Propagator.method
     reltol = Propagator.reltol
     abstol = Propagator.abstol
-    dt = Propagator.dt
 
     μ2, μS, as, θ0, ωM, mdot = p
 

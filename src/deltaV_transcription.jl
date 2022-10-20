@@ -38,7 +38,7 @@ end
 
 Construct delta-V vector based on angles w.r.t. inertial frame
 """
-function dv_inertial_angles(mu::Float64, state0, vinf_params)
+function dv_inertial_angles(state0, vinf_params)
     # unpack dv-parameters
     τ, γ, β = vinf_params[1], vinf_params[2], vinf_params[3]
     dv_vec = τ * [cos(γ) * cos(β), sin(γ) * cos(β), sin(β)]
@@ -47,11 +47,14 @@ end
 
 
 """
-    dv_sun_dir_angles(mu::Float64, state0::Vector{Float64}, vinf_params)
+    dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
 
-Construct delta-V vector based on angles w.r.t. Sun-SC direction
+Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 """
-function dv_sun_dir_angles(mu::Float64, state0::Vector{Float64}, vinf_params)
+function dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+    b2 = [-μS/(μS+1)*as,0,0]
+    sc = state0
 
-    
+    dir = (b2-sc)/ norm(b2-sc)
+    return dir * τ
 end

@@ -51,14 +51,15 @@ Right-hand side expression for state-vector in BCR4BP
         τ  : thrust magnitude (0~1)
         γ  : thrust angle 1
         β  : thrust angle 2
+        mdot : mass-flow rate
     - `t`: time
 """
-function rhs_bcr4bp!(du,u,p,t)
+function rhs_bcr4bp_with_mass!(du,u,p,t)
     # unpack state
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, γ, β = p[6], p[7], p[8]
+    τ, γ, β, mdot = p[6], p[7], p[8], p[9]
 
     θ = θ0 + ωM * t
 
@@ -86,12 +87,13 @@ function rhs_bcr4bp!(du,u,p,t)
     du[4] = 2*vy  + x + Fx
     du[5] = -2*vx + y + Fy
     du[6] =             Fz
-end
 
+    du[7] = -mdot * τ
+end
 
 """
 
-Right-hand side expression for state-vector in BCR4BP
+Right-hand side expression for state-vector in BCR4BP, thrusting predefined direction
 
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
@@ -104,24 +106,22 @@ Right-hand side expression for state-vector in BCR4BP
             l* : Earth-moon distance (384,400 km)
         ωM : Earth-Moon line's angular velocity around E-M barycenter
         τ  : thrust magnitude (0~1)
-        γ  : thrust angle 1
-        β  : thrust angle 2
         mdot : mass-flow rate
     - `t`: time
 """
-function rhs_bcr4bp_with_mass!(du,u,p,t)
+function rhs_bcr4bp_predifined_dir!(du,u,p,t)
     # unpack state
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, γ, β, mdot = p[6], p[7], p[8], p[9]
+    τ, mdot = p[6], p[7]
 
     θ = θ0 + ωM * t
 
     # create Thrust term 
     # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
     #        in the future
-    T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
+    T = dv_sun_dir_angles(μ, as, [x,y,z], τ)
     Tx, Ty, Tz = T[1], T[2], T[3]
 
     # compute distances
