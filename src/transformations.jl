@@ -4,14 +4,12 @@ Transformations
 
 
 """
+    transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
+
 Transform state from Earth-Moon rotating frame to Sun-B1 rotating frame.
 Careful with sign of ωs!! (should be negative)
 """
-function transform_EMrot_to_SunB1(
-    state,
-    θs::Real,
-    ωs::Real,
-)
+function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
     ωm = -ωs
     θm = π - θs
     cos_θm = cos(θm)
