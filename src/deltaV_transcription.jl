@@ -52,9 +52,24 @@ end
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 """
 function dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
-    b2 = [-μS/(μS+1)*as,0,0]
+    b2 = [-μS/(μS+1)*as, 0, 0]
     sc = state0
 
-    dir = (b2-sc)/ norm(b2-sc)
+    dir = (b2-sc) / norm(b2-sc)
+    return dir * τ
+end
+
+
+"""
+    dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+
+Construct delta-V vector, directing along with tidal force vector
+"""
+function dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+    # sun-earth distance vector
+    r = [-as, 0, 0]
+    phi = muS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * transpse(state0)
+    dir = phi / norm(phi)
+
     return dir * τ
 end
