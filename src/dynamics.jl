@@ -2,6 +2,44 @@
 Dynamics functions
 """
 
+abstract type AbstractParameterType end
+
+Base.@kwdef struct dynamics_params <: AbstractParameterType
+    mu1::Real
+    mu2::Real
+    mus::Real
+    lstar::Real
+    tstar::Real
+    as::Real
+    oms::Real
+    oml::Real
+end
+
+"""
+Get dynamics parameters for Earth-Moon-Sun system
+"""
+function dyanmics_parameters()
+    mu2    = 1.215058560962404E-2     # Moon
+    mu1    = 1 - mu1                  # Earth
+    gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
+    gm_sun = 1.3271244004193938E+11   # GM of Sun
+
+    t_sidereal = 27.3217*86400        # sec
+    t_synodic  = 29.530588*86400      # sec
+
+    tstar = t_sidereal / (2π)         # sec
+    lstar = (tstar^2 * gm_em)^(1/3)   # km
+
+    mus   = gm_sun/gm_em
+    as    = 1.000003 * 1.495978707e8 / lstar
+
+    oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
+    oml   = 2π/(t_sidereal/tstar)     # rad/[canonical time]
+    return dynamics_params(
+        mu1, mu2, mus, lstar, tstar, as, oms, oml
+    )
+end
+
 
 """
     rhs_cr3bp!(du,u,p,t)
@@ -63,7 +101,7 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
 
     θ = θ0 + ωM * t
 
-    # create Thrust term 
+    # create Thrust term
     # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
     #        in the future
     T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
@@ -78,7 +116,7 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
     du[1] = u[4]
     du[2] = u[5]
     du[3] = u[6]
-    
+
     # forces applied (Sun, Earth, Moon, and thrust term)
     Fx = μS / r30^3 * (-as - x) + (1-μ2) / r31^3 * (-μ2*cos(θ) - x)    + μ2 / r32^3 * ((1-μ2)*cos(θ) - x) + Tx
     Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y) + Ty
@@ -118,7 +156,7 @@ function rhs_bcr4bp_predifined_dir!(du,u,p,t)
 
     θ = θ0 + ωM * t
 
-    # create Thrust term 
+    # create Thrust term
     # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
     #        in the future
     T = dv_sun_dir_angles(μ, as, [x,y,z], τ)
@@ -133,7 +171,7 @@ function rhs_bcr4bp_predifined_dir!(du,u,p,t)
     du[1] = u[4]
     du[2] = u[5]
     du[3] = u[6]
-    
+
     # forces applied (Sun, Earth, Moon, and thrust term)
     Fx = μS / r30^3 * (-as - x) + (1-μ2) / r31^3 * (-μ2*cos(θ) - x)    + μ2 / r32^3 * ((1-μ2)*cos(θ) - x) + Tx
     Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y) + Ty
