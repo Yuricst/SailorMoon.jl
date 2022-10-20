@@ -20,7 +20,7 @@ Get dynamics parameters for Earth-Moon-Sun system
 """
 function dyanmics_parameters()
     mu2    = 1.215058560962404E-2     # Moon
-    mu1    = 1 - mu1                  # Earth
+    mu1    = 1 - mu2                  # Earth
     gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
     gm_sun = 1.3271244004193938E+11   # GM of Sun
 
