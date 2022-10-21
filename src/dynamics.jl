@@ -13,7 +13,10 @@ Base.@kwdef struct dynamics_params <: AbstractParameterType
     as::Real
     oms::Real
     oml::Real
+    r_park::Real
+    v_park::Real
 end
+
 
 """
 Get dynamics parameters for Earth-Moon-Sun system
@@ -35,8 +38,13 @@ function dyanmics_parameters()
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
     oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
+
+    # parking radius
+    r_park_km = 6378 + 200            # parking radius, km
+    r_park = r_park_km/lstar          # parking radius, canonical
+    v_park = sqrt(mu1/r_park)         # parking velocity, canonical
     return dynamics_params(
-        mu1, mu2, mus, lstar, tstar, as, oms, oml
+        mu1, mu2, mus, lstar, tstar, as, oms, oml, r_park, v_park
     )
 end
 
