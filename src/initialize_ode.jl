@@ -52,7 +52,7 @@ end
 
 """
     set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
-    
+
 Providing the terminal state of the SC based on arrival to manifold.
 
 # Arguments

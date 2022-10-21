@@ -20,8 +20,8 @@ Propagate trajectory and compute continuity residual
 """
 function sf_propagate(
     x::AbstractVector{T},
-    p::Vector,
     n::Int,
+    p::Vector,
     Propagator::ODEPropagator,
     param3b::AbstractParameterType,
     LPOArrival::AbstractTerminalType
