@@ -40,7 +40,7 @@ abstract type AbstractTerminalType end
 
 Base.@kwdef struct CR3BPLPO <: AbstractTerminalType
     x0::Vector        # initial state
-    period::Vector    # period
+    period::Real    # period
     ys0::Vector       # stable eigenvector at x0
     prob_cr3bp_stm::ODEProblem
     ϵ::Real
@@ -65,13 +65,12 @@ Providing the terminal state of the SC based on arrival to manifold.
     The initial velocity direction: the directions s.t. the SC is on the CR3BP invariant manifold...?
 """
 function set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
-    x0_lpo, period_lpo, monodromy = duhduhduh_function()
-
     # propagate the periodic orbit until ϕT.
+    x0_stm = vcat(LPOArrival.x0, reshape(I(6), (36,)))[:]
     _prob = remake(
         LPOArrival.prob_cr3bp_stm;
         tspan = (0.0, ϕ * LPOArrival.period),
-        u0 = LPOArrival.x0,
+        u0 = x0_stm,
         p=[param3b.mu2]
     )
     sol = DifferentialEquations.solve(
@@ -82,11 +81,11 @@ function set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival:
     stm = transpose(reshape(sol.u[end][7:end], (6, 6)))
 
     # translate stable eigenvector and perturb final state
-    ys = dot(stm, LPOArrival.ys0)
+    ys = stm * LPOArrival.ys0
     state_f = x_tf + LPOArrival.ϵ * ys/norm(ys)
 
     # coodinate transformation
-    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, π-θm, param3b.ωs)  # FIXME is θs appropriate?
+    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, π-θm, param3b.oms)  # FIXME is θs appropriate?
 
     return state_f_SunB1
 end
