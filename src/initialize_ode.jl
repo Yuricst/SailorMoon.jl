@@ -51,15 +51,15 @@ end
 
 
 """
-
+    set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
+    
 Providing the terminal state of the SC based on arrival to manifold.
 
 # Arguments
-    - `ϕ`  : "angle" at the LPO, based on its periodic orbit
-    - `θm` : terminal E-M line's angle w.r.t. Sun-B1 line
-    - `param3b`  : angular velocity of E-M line w.r.t. Sun-B1 line
-    - `LPOArrival`
-    - `Propagator`
+    - `ϕ`: "angle" at the LPO, based on its periodic orbit
+    - `θm`: terminal E-M line's angle w.r.t. Sun-B1 line
+    - `param3b::AbstractParameterType`: angular velocity of E-M line w.r.t. Sun-B1 line
+    - `LPOArrival::CR3BPLPO`: arrival periodic orbit object
 
 # assumtion
     The initial velocity direction: the directions s.t. the SC is on the CR3BP invariant manifold...?
