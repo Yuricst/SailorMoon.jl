@@ -26,7 +26,7 @@ function set_initial_state(param3b::dynamics_params, param_vinf, θ1)
     ]      # planar
 
     # SC position
-    r_E_sc = param3b.r_park * [cos(lat)*cos(long), cos(lat)*sin(long), sin(long)]
+    r_E_sc = param3b.r_park * [cos(lat)*cos(long), cos(lat)*sin(long), sin(lat)]
     # SC circular velocity
     v_E_sc = param3b.v_park * [sin(long), cos(long), 0]
     Δv_in  = dv1 * [sin(long), cos(long), 0]  #[cos(long)*cos(lat), cos(long)*sin(lat), sin(lat)]

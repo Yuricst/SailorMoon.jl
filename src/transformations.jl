@@ -44,11 +44,28 @@ end
 """
 Transform state from Earth inertial frame to Earth-Moon rotating frame.
 Careful with sign of ωm!! (should be positive)
+    θ : angle of E-M line from earth inertial frame's x-axis (CW: -, CCW: +)
 """
-function transform_earthIne_to_EMrot(state::Vector, θm::Real, ωm::Real)
-
-
-
+function transform_earthIne_to_EMrot(state::Vector, θ::Real, ωm::Real)
+    # move the orign from earth to B1
+    state = state - [-μ*cos(θ), -μ*sin(θ), 0]
+    
+    # construct transformation matrix
+    cos_θ = cos(θ)
+    sin_θ = sin(θ)
+    rotmat = inv(
+        [
+            cos_θ -sin_θ 0.0 0.0 0.0 0.0
+            sin_θ cos_θ 0.0 0.0 0.0 0.0
+            0.0 0.0 1.0 0.0 0.0 0.0
+            -ωm*sin_θ -ωm*cos_θ 0.0 cos_θ -sin_θ 0.0
+            ωm*cos_θ -ωm*sin_θ 0.0 sin_θ cos_θ 0.0
+            0.0 0.0 0.0 0.0 0.0 1.0
+        ],
+    )
+    # transform
+    state_r = rotmat * state
+    return state_r
 
     return state_conv
 end

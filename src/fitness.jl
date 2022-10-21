@@ -2,12 +2,15 @@
 Generate fitness function
 
 # Arguments
-    - `p`: parameters
-
+    - `n` : number of sf transcription (discretization per arc)
+    - `SCParam` : [mdot, tmax]
+    - `Propagator` : 
+    - `param3b` : 
+    - `LPOArrival` : 
 """
 function get_fitness(
     n::Int,
-    p::Vector{Float64},
+    SCparam::Vector{Float64},
     Propagator::ODEPropagator,
     param3b::AbstractParameterType,
     LPOArrival::AbstractTerminalType
@@ -18,7 +21,7 @@ function get_fitness(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res, _, _, _, _ = sf_propagate(x,n,p,Propagator,param3b,LPOArrival)
+        res, _, _, _, _ = sf_propagate(x,n,SCparam,Propagator,param3b,LPOArrival)
 
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
@@ -26,7 +29,7 @@ function get_fitness(
         return residuals
     end
 
-    nx = NaN  # FIXME ... number of decision variables
+    nx = 9 + 6*n  # number of decision variables (tof(1),c_launch(5),c_arr(3),tau1(3n),tau2(3n))
     storage_ad = DiffResults.JacobianResult(x0)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[3] = 1.0   # FIXME ... insert 1 to whichever index of x corresponding to e.g. mass at LEO

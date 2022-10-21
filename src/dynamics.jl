@@ -37,7 +37,7 @@ function dyanmics_parameters()
     as    = 1.000003 * 1.495978707e8 / lstar
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
+    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time] # FIXME: are they the same? 
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
@@ -120,7 +120,7 @@ Right-hand side expression for state-vector in BCR4BP
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
     - `u`: state-vector
-    - `p`: parameters, where p = [μ2, μS, as, θ0, ωM, τ, γ, β]
+    - `p`: parameters, where p = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot, tmax]
         m* : mE + mL (6.0455 * 10^22)
         μ2 : mL / m* (0.012150585609624)
         μS : mS / m* (0.00000303951)
@@ -131,6 +131,7 @@ Right-hand side expression for state-vector in BCR4BP
         γ  : thrust angle 1
         β  : thrust angle 2
         mdot : mass-flow rate
+        tmax : max thrust
     - `t`: time
 """
 function rhs_bcr4bp_with_mass!(du,u,p,t)
@@ -138,13 +139,11 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, γ, β, mdot = p[6], p[7], p[8], p[9]
+    τ, γ, β, mdot, tmax = p[6], p[7], p[8], p[9], p[10]
 
     θ = θ0 + ωM * t
-
+    
     # create Thrust term
-    # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
-    #        in the future
     T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
     Tx, Ty, Tz = T[1], T[2], T[3]
 
@@ -177,7 +176,7 @@ Right-hand side expression for state-vector in BCR4BP, thrusting predefined dire
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
     - `u`: state-vector
-    - `p`: parameters, where p = [μ2, μS, as, θ0, ωM, τ, γ, β]
+    - `p`: parameters, where p = [μ2, μS, as, θ0, ωM, τ, mdot, tmax]
         m* : mE + mL (6.0455 * 10^22)
         μ2 : mL / m* (0.012150585609624)
         μS : mS / m* (0.00000303951)
@@ -186,6 +185,7 @@ Right-hand side expression for state-vector in BCR4BP, thrusting predefined dire
         ωM : Earth-Moon line's angular velocity around E-M barycenter
         τ  : thrust magnitude (0~1)
         mdot : mass-flow rate
+        tmax : max thrust
     - `t`: time
 """
 function rhs_bcr4bp_predifined_dir!(du,u,p,t)
@@ -193,15 +193,13 @@ function rhs_bcr4bp_predifined_dir!(du,u,p,t)
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
     μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, mdot = p[6], p[7]
+    τ, mdot, tmax = p[6], p[7], p[8]
 
     θ = θ0 + ωM * t
 
     # create Thrust term
-    # To Do: we want to change this to the other cooridnate frame (directing towards Sun's tidal force etc.)
-    #        in the future
-    T = dv_sun_dir_angles(μ, as, [x,y,z], τ)
-    Tx, Ty, Tz = T[1], T[2], T[3]
+    T = dv_sun_dir_angles(μ, as, [x,y,z], τ)  # dimensionless vector
+    Tx, Ty, Tz = T * tmax / mdot  # make into [m/s^2]
 
     # compute distances
     r30 = sqrt((as - x)^2 + y^2 + z^2)
