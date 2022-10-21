@@ -29,7 +29,7 @@ function get_fitness(
         return residuals
     end
 
-    nx = 9 + 6*n  # number of decision variables (tof(1),c_launch(5),c_arr(3),tau1(3n),tau2(3n))
+    nx = 8 + 6*n  # number of decision variables (tof(1),c_launch(4),c_arr(3),tau1(3n),tau2(3n))
     storage_ad = DiffResults.JacobianResult(x0)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[3] = 1.0   # FIXME ... insert 1 to whichever index of x corresponding to e.g. mass at LEO
