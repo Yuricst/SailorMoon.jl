@@ -20,14 +20,14 @@ Propagate trajectory and compute continuity residual
 """
 function sf_propagate(
     x::AbstractVector{T},
-    p::Vector{Float64},
+    p::Vector,
     n::Int,
     Propagator::ODEPropagator,
     param3b::AbstractParameterType,
     LPOArrival::AbstractTerminalType
 ) where T
-    # ... but half of these are defined in r3bp-param
-    μ2, μS, as, θ0, ωM, mdot = p
+    # ... but half of these are defined in r3bp-param FIXME
+    θ0, mdot = p  # what is θ0 ?? FIXME also probably need tmax!!!
 
     # initial condition
     t0 = 0
@@ -48,7 +48,7 @@ function sf_propagate(
     sol_fwd = []
     for i in 1:n
         τ, γ, β = tau1[8+3*n:10+3*n]
-        params = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot]
+        params = [param3b.mu2, param3b.mus, param3b.as, θ0, param3b.oml, τ, γ, β, mdot]
         tspan = [t0, t0 + tof/2/n]
 
         # construct ODE problem and solve
@@ -78,7 +78,7 @@ function sf_propagate(
 
     for i in 1:n
         τ, γ, β = tau2[end-3*n+1:end-3*n+3]
-        params = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot]
+        params = [param3b.mu2, param3b.mus, param3b.as, θ0, param3b.oml, τ, γ, β, mdot]  # θ0??
         tspan = [tf, tf - tof/2/n]
 
         # construct ODE problem and solve
