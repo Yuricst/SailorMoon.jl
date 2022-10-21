@@ -78,7 +78,7 @@ function sf_propagate(
 
     for i in 1:n
         τ, γ, β = tau2[end-3*n+1:end-3*n+3]
-        params = [param3b.mu2, param3b.mus, param3b.as, θ0, param3b.oml, τ, γ, β, mdot]  # θ0??
+        params = [param3b.mu2, param3b.mus, param3b.as, θ0, param3b.oml, τ, γ, β, mdot]  # FIXME θ0 is wrong
         tspan = [tf, tf - tof/2/n]
 
         # construct ODE problem and solve
@@ -101,7 +101,8 @@ function sf_propagate(
     end
 
     # take the residual
-    res = get_residual(state0, statef)   # FIXME where is this defined?
+    res = statef - state0
+    #get_residual(state0, statef)   # FIXME where is this defined?
 
     return res, state_fwd, state_bkwd, sol_fwd, sol_bkwd
 end
