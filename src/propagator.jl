@@ -19,13 +19,13 @@ end
 Propagate trajectory and compute continuity residual
 """
 function sf_propagate(
-    x::AbstractVector{Float64},
+    x::AbstractVector{T},
     p::Vector{Float64},
     n::Int,
     Propagator::ODEPropagator,
     param3b::AbstractParameterType,
     LPOArrival::AbstractTerminalType
-)
+) where T
     # ... but half of these are defined in r3bp-param
     μ2, μS, as, θ0, ωM, mdot = p
 
