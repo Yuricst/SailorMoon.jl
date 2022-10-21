@@ -6,9 +6,11 @@ Generate fitness function
 
 """
 function get_fitness(
+    n::Int,
     p::Vector{Float64},
     Propagator::ODEPropagator,
-    n::Int=20,
+    param3b::AbstractParameterType,
+    LPOArrival::AbstractTerminalType
 )
     # number of constraints FIXME ... check if this is correct!
     ng = 7
@@ -16,7 +18,7 @@ function get_fitness(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res, _, _, _, _ = sf_propagate(x,p,n,Propagator)
+        res, _, _, _, _ = sf_propagate(x,p,n,Propagator,param3b,LPOArrival)
 
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
