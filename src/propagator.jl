@@ -35,15 +35,16 @@ function sf_propagate(
     # extract optimization var
     tof      = x[1]
     c_launch = x[2 : 6]  # m0, v∞1, α1, δ1, θ1
-    c_arr    = x[7 : 9]  # m2, ϕ, θ2
-    tau1     = x[10 : (length(x)-9)/2 + 9]  # discretization numbers are the same for the first & second arc
-    tau2     = x[(length(x)-9)/2 + 10 : end]
+    c_arr    = x[7 : 8]  # m2, ϕ
+    tau1     = x[9 : (length(x)-8)/2 + 8]  # discretization numbers are the same for the first & second arc
+    tau2     = x[(length(x)-8)/2 + 9 : end]
     tf       = t0 + c_launch[1] + c_arr[1]
 
     # forward propagation
     # set up the initial state
     state_fwd = zeros(7, n+1)
     θ0 = c_launch[5]
+    θf = θ0 + param3b.oml * t
 
     state0 = set_initial_state(param3b, c_launch[2:4], θ0)  
     state_fwd[:,1] = vcat(state0, c_launch[1])  
@@ -75,8 +76,6 @@ function sf_propagate(
     # backward propagation
     # set up the terminal state
     state_bkwd = zeros(7, n+1)
-    θf = c_arr[3]
-
     statef = set_terminal_state(c_arr[2], θf, param3b, LPOArrival)
     state_bkwd[:,1] = vcat(statef, c_arr[1])
     sol_bkwd = []
