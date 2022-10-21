@@ -11,23 +11,22 @@ Base.@kwdef struct ODEPropagator <: AbstractPropagatorType
     method=Tsit5()
     reltol::Real=1e-12
     abstol::Real=1e-12
+    prob_base::ODEProblem  # base problem should have dynamics.rhs_bcr4bp_with_mass!
 end
 
 
+"""
+Propagate trajectory and compute continuity residual
+"""
 function sf_propagate(
     x::AbstractVector{Float64},
     p::Vector{Float64},
     n::Int,
     Propagator::ODEPropagator,
-    SFset::SimsFlanaganSettings,
-    param3b::Vector{Float64}
+    param3b::AbstractParameterType,
+    LPOArrival::AbstractTerminalType
 )
-
-    # FIXME unpack parameters
-    method = Propagator.method
-    reltol = Propagator.reltol
-    abstol = Propagator.abstol
-
+    # ... but half of these are defined in r3bp-param
     μ2, μS, as, θ0, ωM, mdot = p
 
     # initial condition
@@ -44,9 +43,8 @@ function sf_propagate(
     # forward propagation
     # set up the initial state
     state_fwd = zeros(7, n+1)
-    param3b = [μ2,r0]
-    state0 = initialize_ode.set_initial_state(param3b, c_launch[3:5], c_launch[6])
-    state_fwd[:,1] = vcat(state0, c_launch[0])
+    state0 = set_initial_state(param3b, c_launch[3:5], c_launch[6])  # FIXME c_launch has 5 elements
+    state_fwd[:,1] = vcat(state0, c_launch[0])  # FIXME no 0 index!
     sol_fwd = []
     for i in 1:n
         τ, γ, β = tau1[8+3*n:10+3*n]
@@ -54,8 +52,17 @@ function sf_propagate(
         tspan = [t0, t0 + tof/2/n]
 
         # construct ODE problem and solve
-        ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, state0, tspan, params)
-        sol = solve(ode_prob, method, reltol=reltol, abstol=abstol)
+        #ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, state0, tspan, params)
+        _prob = remake(
+            Propagator.prob_traj_design;
+            tspan = tspan,
+            u0 = state0,
+            p = params,
+        )
+        sol = DifferentialEquations.solve(
+            _prob, Propagator.method,
+            reltol = Propagator.reltol, abstol = Propagator.abstol
+        )
         t0 = tspan[2]
         state0 = sol.u[end]
         state_fwd[:,i+1] = state0
@@ -65,7 +72,7 @@ function sf_propagate(
     # backward propagation
     # set up the terminal state
     state_bkwd = zeros(7, n+1)
-    statef = initialize_ode.set_terminal_state(c_arr[3], c_arr[4], ωM)
+    statef = set_terminal_state(c_arr[3], c_arr[4], param3b, LPOArrival)
     state_bkwd[:,1] = vcat(statef, c_arr[0])
     sol_bkwd = []
 
@@ -75,8 +82,18 @@ function sf_propagate(
         tspan = [tf, tf - tof/2/n]
 
         # construct ODE problem and solve
-        ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, statef, tspan, params)
-        sol = solve(ode_prob, method, reltol=reltol, abstol=abstol)
+        #ode_prob = ODEProblem(dynamics.rhs_bcr4bp_with_mass!, statef, tspan, params)
+        #sol = solve(ode_prob, method, reltol=reltol, abstol=abstol)
+        _prob = remake(
+            Propagator.prob_traj_design;
+            tspan = tspan,
+            u0 = statef,
+            p = params,
+        )
+        sol = DifferentialEquations.solve(
+            _prob, Propagator.method,
+            reltol = Propagator.reltol, abstol = Propagator.abstol
+        )
         tf = tspan[2]
         statef = sol.u[end]
         state_bkwd[:,i+1] = statef
@@ -84,7 +101,7 @@ function sf_propagate(
     end
 
     # take the residual
-    res = get_residual(state0, statef)
+    res = get_residual(state0, statef)   # FIXME where is this defined?
 
     return res, state_fwd, state_bkwd, sol_fwd, sol_bkwd
 end

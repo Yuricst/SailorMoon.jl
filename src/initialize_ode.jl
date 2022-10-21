@@ -7,68 +7,86 @@ Initial & Terminal condition
 Providing the initial state of the SC
 
 # Arguments
-    - `param3b`: 3bp parameters
-        - `μ2` : m_L / (m_L + m_E)
-        - `r0` : distance of Earth center and SC (normalized)
+    - `param3b::dynamics_params`: 3bp parameters
     - `param_vinf' : parameters for defining the Vinf vector
-        - `v∞1` : v-infinity at the initial state (w.r.t. the Earth),
-        - `long`  : initial longtitude,
+        - `dv1` : delta-v at the initial state (w.r.t. the Earth),
+        - `long` : initial longtitude,
         - `lat`  : initial latitude ,
     - `θ1`  : initial E-M line's angle w.r.t. Sun-B1 line
 """
 
-function set_initial_state(param3b, param_vinf, θ1)
-    μ2, r0 = param3b[1], param3b[2]
+function set_initial_state(param3b::dynamics_params, param_vinf, θ1)
     dv1, long, lat = param_vinf[1], param_vinf[2], param_vinf[3]
-    
+
     # get the initial state of the earth
-    ωE = 1
-    earth0_in = [μ2*cos(π + θ1), μ2*sin(π+θ1), 0, ωE*μ2*sin(θ1), -ωE*μ2*cos(θ1), 0]
+    ωE = param3b.oml
+    earth0_in = [
+        param3b.mu2*cos(π + θ1), param3b.mu2*sin(π+θ1), 0,
+        ωE*param3b.mu2*sin(θ1), -ωE*param3b.mu2*cos(θ1), 0
+    ]      # planar
 
-    # SC 
-    esc0_in = r0 * [cos(long)*cos(lat), cos(long)*sin(lat), sin(lat)]
-    Δv_in  = dv1 * [cos(long)*cos(lat), cos(long)*sin(lat), sin(lat)]
-    push!(esc0_in, Δv_in)
+    # SC position
+    r_E_sc = param3b.r_park * [cos(lat)*cos(long), cos(lat)*sin(long), sin(long)]
+    # SC circular velocity
+    v_E_sc = param3b.v_park * [sin(long), cos(long), 0]
+    Δv_in  = dv1 * [sin(long), cos(long), 0]  #[cos(long)*cos(lat), cos(long)*sin(lat), sin(lat)]
 
-    # take a sum
-    return earth0_in + esc0_in
+    # take sum of Earth position + parking orbit + delta-V
+    return earth0_in + vcat(r_E_sc, v_E_sc)[:] + vcat([0,0,0], Δv_in)[:]
 end
 
+
+abstract type AbstractTerminalType end
+
+Base.@kwdef struct CR3BPLPO <: AbstractTerminalType
+    x0::Vector        # initial state
+    period::Vector    # period
+    ys0::Vector       # stable eigenvector at x0
+    prob_cr3bp_stm::ODEProblem
+    ϵ::Real
+    method=Tsit5()
+    reltol::Real=1e-12
+    abstol::Real=1e-12
+end
 
 
 """
 
-Providing the terminal state of the SC
+Providing the terminal state of the SC based on arrival to manifold.
 
 # Arguments
     - `ϕ`  : "angle" at the LPO, based on its periodic orbit
     - `θm` : terminal E-M line's angle w.r.t. Sun-B1 line
-    - `ω`  : angular velocity of E-M line w.r.t. Sun-B1 line
+    - `param3b`  : angular velocity of E-M line w.r.t. Sun-B1 line
+    - `LPOArrival`
+    - `Propagator`
 
 # assumtion
-    The initial velocity direction: the directions s.t. the SC is on the CR3BP invariant manifold...? 
+    The initial velocity direction: the directions s.t. the SC is on the CR3BP invariant manifold...?
 """
-
-function set_terminal_state(ϕ, θm, ω)
+function set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
     x0_lpo, period_lpo, monodromy = duhduhduh_function()
 
     # propagate the periodic orbit until ϕT.
-    prob_ = ODEProblem(rhs_pcr3bp_sv!, x0_lpo, (0, ϕ*period_lpo), (μ));
-    sol = solve(prob_, Tsit5(), reltol=1e-11, abstol=1e-11);
-    x_t = sol.u[end][1:6]
+    _prob = remake(
+        LPOArrival.prob_cr3bp_stm;
+        tspan = (0.0, ϕ * LPOArrival.period),
+        u0 = LPOArrival.x0,
+        p=[param3b.mu2]
+    )
+    sol = DifferentialEquations.solve(
+        _prob, LPOArrival.method,
+        reltol = LPOArrival.reltol, abstol = LPOArrival.abstol
+    )
+    x_tf = sol.u[end][1:6]
+    stm = transpose(reshape(sol.u[end][7:end], (6, 6)))
 
-    # add varation based on the eigenvector 
-    ϵ = 1e-6  # koshiki_nanndakke()
-
-    # get eigenvector for the stable manifold
-    v_stb = get_eigenvector(monodromy, stable::True)
-
-    state_f = x_t + ϵ * v_stb * norm(v_stb)
+    # translate stable eigenvector and perturb final state
+    ys = dot(stm, LPOArrival.ys0)
+    state_f = x_tf + LPOArrival.ϵ * ys/norm(ys)
 
     # coodinate transformation
-    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, θm, -ω)
+    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, π-θm, param3b.ωs)  # FIXME is θs appropriate?
 
     return state_f_SunB1
 end
-
-    
