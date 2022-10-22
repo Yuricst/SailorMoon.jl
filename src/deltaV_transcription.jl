@@ -38,7 +38,7 @@ end
 
 Construct delta-V vector based on angles w.r.t. inertial frame
 """
-function dv_inertial_angles(state0, vinf_params)
+function dv_inertial_angles(vinf_params)
     # unpack dv-parameters
     τ, γ, β = vinf_params[1], vinf_params[2], vinf_params[3]
     dv_vec = τ * [cos(γ) * cos(β), sin(γ) * cos(β), sin(β)]

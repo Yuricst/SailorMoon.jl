@@ -192,8 +192,8 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
     θ = θ0 + ωM * t
     
     # create Thrust term
-    T = dv_inertial_angles(μ, [x,y,z], [τ,γ,β])
-    Tx, Ty, Tz = T[1], T[2], T[3]
+    T = dv_inertial_angles([τ,γ,β])
+    Tx, Ty, Tz = T * tmax / mdot
 
     # compute distances
     r30 = sqrt((as - x)^2 + y^2 + z^2)
