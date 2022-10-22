@@ -29,15 +29,15 @@ function get_fitness(
         return residuals
     end
 
-    nx = 8 + 6*n  # number of decision variables (tof(1),c_launch(4),c_arr(3),tau1(3n),tau2(3n))
+    nx = 7 + 6*n  # number of decision variables (tof(1),c_launch(4),c_arr(2),tau1(3n),tau2(3n))
     storage_ad = DiffResults.JacobianResult(x0)  # initialize storage for AD
     df_onehot = zeros(nx)
-    df_onehot[3] = 1.0   # FIXME ... insert 1 to whichever index of x corresponding to e.g. mass at LEO
+    df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
 
     # create objective function
     fitness! = function (g, df, dg, x)
         # evaluate objective & objective gradient (trivial)
-        f = x[3]       # FIXME ... whichever x corresponds to e.g. mass at LEO
+        f = x[2]       # whichever x corresponds to e.g. mass at LEO
         df[1:nx] = df_onehot[:]
         # evalue constraint & constraint gradient
         ForwardDiff.jacobian!(storage_ad, eval_sft, x)
