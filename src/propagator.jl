@@ -34,8 +34,8 @@ function sf_propagate(
 
     # extract optimization var
     tof      = x[1]
-    c_launch = x[2 : 6]  # m0, v∞1, α1, δ1, θ1
-    c_arr    = x[7 : 8]  # m2, ϕ
+    c_launch = x[2 : 5]  # m0, v∞1, α1, δ1
+    c_arr    = x[6 : 8]  # m2, ϕ, θ2
     tau1     = x[9 : (length(x)-8)/2 + 8]  # discretization numbers are the same for the first & second arc
     tau2     = x[(length(x)-8)/2 + 9 : end]
     tf       = t0 + c_launch[1] + c_arr[1]
@@ -43,8 +43,8 @@ function sf_propagate(
     # forward propagation
     # set up the initial state
     state_fwd = zeros(7, n+1)
-    θ0 = c_launch[5]
-    θf = θ0 + param3b.oml * t
+    θf = c_arr[3]
+    θ0 = θf - param3b.oml * tof
 
     state0 = set_initial_state(param3b, c_launch[2:4], θ0)  
     state_fwd[:,1] = vcat(state0, c_launch[1])  
@@ -70,7 +70,7 @@ function sf_propagate(
         state0 = sol.u[end]
         state_fwd[:,i+1] = state0
         push!(sol_fwd, sol)
-        θ0 = θ0 + tof/2/n * oml  # FIXME: oml or oms? I believe it's sidereal ω 
+        θ0 = θ0 + tof/2/n * param3b.oml  
     end
 
     # backward propagation
@@ -102,7 +102,7 @@ function sf_propagate(
         statef = sol.u[end]
         state_bkwd[:,i+1] = statef
         push!(sol_bkwd, sol)
-        θf = θf - tof/2/n * oml  # FIXME: oml or oms? I believe it's sidereal ω
+        θf = θf - tof/2/n * param3b.oml  # FIXME: oml or oms? I believe it's sidereal ω
     end
 
     # take the residual
