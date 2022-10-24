@@ -37,7 +37,7 @@ function dyanmics_parameters()
     as    = 1.000003 * 1.495978707e8 / lstar
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time] 
+    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
@@ -151,9 +151,9 @@ function rhs_bcr4bp!(du,u,p,t)
     du[3] = u[6]
 
     # forces applied (Sun, Earth, Moon, and thrust term)
-    Fx = μS / r30^3 * (-as - x) + (1-μ2) / r31^3 * (-μ2*cos(θ) - x)    + μ2 / r32^3 * ((1-μ2)*cos(θ) - x) 
-    Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y) 
-    Fz = μS / r30^3 * (-z)      + (1-μ2) / r31^3 * (-z)                + μ2 / r32^3 * (-z)                
+    Fx = μS / r30^3 * (-as - x) + (1-μ2) / r31^3 * (-μ2*cos(θ) - x)    + μ2 / r32^3 * ((1-μ2)*cos(θ) - x)
+    Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y)
+    Fz = μS / r30^3 * (-z)      + (1-μ2) / r31^3 * (-z)                + μ2 / r32^3 * (-z)
 
     du[4] = 2*vy  + x + Fx
     du[5] = -2*vx + y + Fy
@@ -190,10 +190,10 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
     τ, γ, β, mdot, tmax = p[6], p[7], p[8], p[9], p[10]
 
     θ = θ0 + ωM * t
-    
+
     # create Thrust term
     T = dv_inertial_angles([τ,γ,β])
-    Tx, Ty, Tz = T * tmax / mdot
+    Tx, Ty, Tz = T * tmax / u[7]  # mdot
 
     # compute distances
     r30 = sqrt((as - x)^2 + y^2 + z^2)
@@ -247,7 +247,7 @@ function rhs_bcr4bp_predifined_dir!(du,u,p,t)
 
     # create Thrust term
     T = dv_sun_dir_angles(μ, as, [x,y,z], τ)  # dimensionless vector
-    Tx, Ty, Tz = T * tmax / mdot  # make into [m/s^2]
+    Tx, Ty, Tz = T * tmax / u[7]  # make into [m/s^2]
 
     # compute distances
     r30 = sqrt((as - x)^2 + y^2 + z^2)

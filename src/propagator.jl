@@ -44,8 +44,8 @@ function sf_propagate(
     θf = c_arr[2]
     θ0 = θf - param3b.oml * tof
 
-    state0 = set_initial_state(param3b, c_launch[2:4], θ0)  
-    state_fwd[:,1] = vcat(state0, c_launch[1])  
+    state0 = set_initial_state(param3b, c_launch[2:4], θ0)
+    state_fwd[:,1] = vcat(state0, c_launch[1])
     sol_fwd = []
     for i in 1:n
         τ, γ, β = tau1[3*n-2 : 3*n]
@@ -67,7 +67,7 @@ function sf_propagate(
         state0 = sol.u[end]
         state_fwd[:,i+1] = state0
         push!(sol_fwd, sol)
-        θ0 = θ0 + tof/2/n * param3b.oml  
+        θ0 = θ0 + tof/2/n * param3b.oml
     end
 
     # backward propagation
@@ -79,7 +79,7 @@ function sf_propagate(
 
     for i in 1:n
         τ, γ, β = tau2[end-3*n+1 : end+3-3*n]
-        params = [param3b.mu2, param3b.mus, param3b.as, θf, param3b.oml, τ, γ, β, mdot, tmax]  
+        params = [param3b.mu2, param3b.mus, param3b.as, θf, param3b.oml, τ, γ, β, mdot, tmax]
         tspan = [0, - tof/2/n]
 
         # construct ODE problem and solve
