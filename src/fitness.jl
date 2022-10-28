@@ -4,9 +4,9 @@ Generate fitness function
 # Arguments
     - `n` : number of sf transcription (discretization per arc)
     - `SCParam` : [mdot, tmax]
-    - `Propagator` : 
-    - `param3b` : 
-    - `LPOArrival` : 
+    - `Propagator` :
+    - `param3b` :
+    - `LPOArrival` :
 """
 function get_fitness(
     n::Int,

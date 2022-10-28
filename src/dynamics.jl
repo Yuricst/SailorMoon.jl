@@ -21,7 +21,7 @@ end
 """
 Get dynamics parameters for Earth-Moon-Sun system
 """
-function dyanmics_parameters()
+function dyanmics_parameters(use_sun::Bool=true)
     mu2    = 1.215058560962404E-2     # Moon
     mu1    = 1 - mu2                  # Earth
     gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
@@ -33,8 +33,13 @@ function dyanmics_parameters()
     tstar = t_sidereal / (2π)         # sec
     lstar = (tstar^2 * gm_em)^(1/3)   # km
 
-    mus   = gm_sun/gm_em
-    as    = 1.000003 * 1.495978707e8 / lstar
+    if use_sun == true
+        mus   = gm_sun/gm_em
+        as    = 1.000003 * 1.495978707e8 / lstar
+    else
+        mus = 0.0
+        as  = 1.0
+    end
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
     oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
