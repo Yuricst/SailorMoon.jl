@@ -57,24 +57,24 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
     tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
     tof_fwd = tof * eta
     tof_bck = tof * (1 - eta)
-    
+
     # construct initial state
     sv0_kep = [sma, ecc, 0.0, raan, 0.0, 0.0]
     θ0 = θf - param3b.oms*(tof_fwd + tof_bck)   # initial Sun angle
     sv0_i = AstrodynamicsBase.kep2cart(sv0_kep, param3b.mu1)
     sv0 = vcat(inertial2rotating(sv0_i, θ0, 1.0) + [-param3b.mu2,0,0,0,0,0], m0)
-    
+
     # construct final state
     #x0_stm = vcat(LPOArrival.x0, reshape(I(6), (36,)))
     #tspan = [0, ϕ*LPOArrival.period]
     #prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, tspan, [param3b.mu2,])
     #sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)
     svf = vcat(SailorMoon.set_terminal_state(ϕ, param3b, LPOArrival), mf)
-    
+
     # initialize storage
     sols_fwd, sols_bck = [], []
     params_fwd, params_bck = [], []
-    
+
     # forward propagation
     nhalf = Int(n/2)
     tspan_fwd = [0, tof_fwd/nhalf]
@@ -82,7 +82,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         τ, γ, β = tau1[3*i-2 : 3*i]
         params = [param3b.mu2, param3b.mus, θ0, param3b.as, param3b.oms, τ, γ, β, mdot, tmax]
         _prob = remake(
-            _prob_base; tspan=tspan_fwd, 
+            _prob_base; tspan=tspan_fwd,
             u0 = sv0,
             p = params,
         )
@@ -95,14 +95,14 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         θ0 += param3b.oms*sol.t[end]
         sv0 = sol.u[end]
     end
-    
+
     # back propagation
     tspan_bck = [0, -tof_bck/(n-nhalf)]
     for i = 1:n-nhalf
         τ, γ, β = tau2[3*i-2 : 3*i]
         params = [param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, τ, γ, β, mdot, tmax]
         _prob = remake(
-            _prob_base; tspan=tspan_bck, 
+            _prob_base; tspan=tspan_bck,
             u0 = svf,
             p = params,
         )
@@ -115,7 +115,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         θf += param3b.oms*sol.t[end]
         svf = sol.u[end]
     end
-    
+
     # residual
     if get_sols == false
         return svf - sv0
@@ -132,7 +132,7 @@ function xprint(x)
     @printf("TOF [day]   : %3.4f\n", tof*param3b.tstar/86400)
     @printf("m0          : %2.4f\n", m0)
     @printf("mf          : %2.4f\n", mf)
-end    
+end
 
 n = 20
 
@@ -168,11 +168,11 @@ pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 scatter!(pcart, lps[:,1], lps[:,2], marker=:diamond, color=:red, label="LPs")
 # trajectory
 for (ifwd,sol_fwd) in enumerate(sols_fwd)
-    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd], 
+    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd],
         linewidth=1.5, label="fwd $ifwd", linestyle=:dashdot)
 end
 for (ibck,sol_bck) in enumerate(sols_bck)
-    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck], 
+    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck],
         linewidth=1.5, label="bck $ibck", linestyle=:solid)
 end
 plot!(pcart; title="Initial guess")
@@ -187,7 +187,7 @@ fitness! = function (g, x)
     # evaluate objective & objective gradient (trivial)
     #f = 1       # whichever x corresponds to e.g. mass at LEO
     #g[:] = propagate_trajectory(x, false)
-    
+
     sols_fwd, sols_bck = propagate_trajectory(x, true)
     sol_fwd = sols_fwd[end]
     sol_bck = sols_bck[end]
@@ -231,11 +231,11 @@ pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 scatter!(pcart, lps[:,1], lps[:,2], marker=:diamond, color=:red, label="LPs")
 # trajectory
 for (ifwd,sol_fwd) in enumerate(sols_fwd)
-    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd], 
+    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd],
         linewidth=1.5, label="fwd $ifwd", linestyle=:dashdot)
 end
 for (ibck,sol_bck) in enumerate(sols_bck)
-    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck], 
+    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck],
         linewidth=1.5, label="bck $ibck", linestyle=:solid)
 end
 plot!(pcart; title="Solved")
