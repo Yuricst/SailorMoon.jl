@@ -59,7 +59,6 @@ function dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, �
     return dir * τ
 end
 
-
 """
     dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
 
@@ -73,3 +72,53 @@ function dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64},
 
     return dir * τ
 end
+
+
+
+"""
+    dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+
+Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
+"""
+function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+    # sun-b1 distance vector
+    τ = p[1]
+    rs = [as * cos(θ), as * sin(θ), 0]
+    sc = state0[1:3] 
+    dir = (rs - sc) / norm(rs - sc)
+
+    return dir * τ
+end
+
+"""
+    dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+
+Construct delta-V vector, directing along with tidal force vector
+"""
+
+function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+    # sun-B1 distance vector 
+    r = [-as, 0, 0]
+    # first, obtain the direction in sun-B1 rotating frame
+    phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * transpse(state0)
+    dir = phi / norm(phi)
+
+    # convert it to the earth-moon rotating frame
+    θ2 = pi - θ
+    cos_θ2 = cos(-θ2)
+    sin_θ2 = sin(-θ2)
+
+    C = [
+        cos_θ2 -sin_θ2 0
+        sin_θ2  cos_θ2 0
+        0       0      1
+    ]
+
+    dir = C * transpose(dir)
+
+    return dir * τ
+end
+
+
+
+
