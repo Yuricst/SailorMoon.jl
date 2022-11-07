@@ -52,9 +52,9 @@ _prob_base = ODEProblem(R3BP.rhs_bcr4bp_thrust!, rand(7), [0,1], params)
 propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) where T
     # unpack
     nx = length(x)
-    θf, tof, eta, sma, ecc, raan, ϕ = x[1:7]  # θf: Sun angle at final time
-    tau1     = x[8 : floor(Int, (nx-7)/2 + 7)]  # discretization numbers are the same for the first & second arc
-    tau2     = x[floor(Int, (nx-7)/2 + 8) : end]
+    θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x[1:9]  # θf: Sun angle at final time
+    tau1     = x[10 : floor(Int, (nx-9)/2 + 9)]  # discretization numbers are the same for the first & second arc
+    tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
     tof_fwd = tof * eta
     tof_bck = tof * (1 - eta)
     
@@ -62,14 +62,14 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
     sv0_kep = [sma, ecc, 0.0, raan, 0.0, 0.0]
     θ0 = θf - param3b.oms*(tof_fwd + tof_bck)   # initial Sun angle
     sv0_i = AstrodynamicsBase.kep2cart(sv0_kep, param3b.mu1)
-    sv0 = vcat(inertial2rotating(sv0_i, θ0, 1.0) + [-param3b.mu2,0,0,0,0,0], 1.0)
+    sv0 = vcat(inertial2rotating(sv0_i, θ0, 1.0) + [-param3b.mu2,0,0,0,0,0], m0)
     
     # construct final state
     #x0_stm = vcat(LPOArrival.x0, reshape(I(6), (36,)))
     #tspan = [0, ϕ*LPOArrival.period]
     #prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, tspan, [param3b.mu2,])
     #sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)
-    svf = vcat(SailorMoon.set_terminal_state(ϕ, param3b, LPOArrival), 1.0)
+    svf = vcat(SailorMoon.set_terminal_state(ϕ, param3b, LPOArrival), mf)
     
     # initialize storage
     sols_fwd, sols_bck = [], []
@@ -124,24 +124,34 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
     end
 end
 
+function xprint(x)
+    θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x[1:9]
+    @printf("Launch SMA  : %1.4f\n", sma)
+    @printf("Launch ECC  : %1.4f\n", ecc)
+    @printf("Launch RAAN : %3.4f\n", rad2deg(raan))
+    @printf("TOF [day]   : %3.4f\n", tof*param3b.tstar/86400)
+    @printf("m0          : %2.4f\n", m0)
+    @printf("mf          : %2.4f\n", mf)
+end    
+
 n = 20
 
 bounds_tau = [0,1]
 bounds_γ   = [-π, π]
 bounds_β   = [-π, π]
-# θf, tof, eta, sma, ecc, raan = x
+# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x
 xtest = [
-    2.4, 22, 0.4, 1.8, 0.87, 4.5, 0.02
+    2.4, 22, 0.4, 1.8, 0.87, 4.5, 0.02, 1.5, 1.0
 ]
 for i = 1:n
-    global xtest = vcat(xtest, [0.1,0,0])
+    global xtest = vcat(xtest, [0,0,0])
 end
 
 lx = [
-    2.6, 18, 0.3, 1.9, 0.7, 0.0, -1.0
+    2.6, 18, 0.3, 1.9, 0.7, 0.0, -1.0, 1.0, 1.0
 ]
 ux = [
-    3.2, 27, 0.7, 2.4, 0.995, 2π, 1.0
+    3.2, 27, 0.7, 2.4, 0.995, 2π, 1.0, 10.0, 1.0
 ]
 for i = 1:n
     global lx = vcat(lx, [bounds_tau[1],bounds_γ[1],bounds_β[1]])
@@ -169,7 +179,7 @@ plot!(pcart; title="Initial guess")
 pcart
 
 # problem settings
-ng = 3
+ng = 7
 lg = [0.0 for idx=1:ng];
 ug = [0.0 for idx=1:ng];
 
@@ -181,14 +191,12 @@ fitness! = function (g, x)
     sols_fwd, sols_bck = propagate_trajectory(x, true)
     sol_fwd = sols_fwd[end]
     sol_bck = sols_bck[end]
-    g[:] = sol_bck.u[end][1:3] - sol_fwd.u[end][1:3]
-    f = norm(sol_bck.u[end][4:6] - sol_fwd.u[end][4:6])
+    g[:] = sol_bck.u[end] - sol_fwd.u[end]
+
+    # minimize initial mass
+    f = sols_fwd[1].u[1][7]
     return f
 end
-
-gfoo  = zeros(ng)
-fitness!(gfoo, xtest)
-println("gfoo: $gfoo")
 
 ip_options = Dict(
     "max_iter" => 200,   # approx 100
@@ -204,12 +212,17 @@ xopt, fopt, info = joptimise.minimize(
     options=ip_options,
 );
 
+
 sols_fwd, sols_bck, params_fwd, params_bck = propagate_trajectory(xopt, true);
 propagate_trajectory(xopt, false)
 
 dr = sols_bck[end].u[end][1:3] - sols_fwd[end].u[end][1:3]
 dv = sols_bck[end].u[end][4:6] - sols_fwd[end].u[end][4:6]
-@printf("DV offset = %1.4f \n", norm(dv)*param3b.lstar/param3b.tstar)
+gfoo  = zeros(ng)
+fitness!(gfoo, xopt)
+println("gfoo: $gfoo")
+@printf("Position offset = %1.4f [DU]\n", norm(dr))
+@printf("Velocity offset = %1.4f [DU/TU]\n", norm(dv))
 
 ## Plot
 cs_fwd = palette([:darkred, :navyblue], max(Int(n/2),2))
