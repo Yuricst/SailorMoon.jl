@@ -217,7 +217,7 @@ function rhs_bcr4bp_with_mass!(du,u,p,t)
 
     du[4] = 2*vy  + x + Fx
     du[5] = -2*vx + y + Fy
-    du[6] =             Fz
+    du[6] =           + Fz
 
     du[7] = -mdot * τ
 end
@@ -269,9 +269,9 @@ function rhs_bcr4bp_predifined_dir!(du,u,p,t)
     Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y) + Ty
     Fz = μS / r30^3 * (-z)      + (1-μ2) / r31^3 * (-z)                + μ2 / r32^3 * (-z)                + Tz
 
-    du[4] = 2*vy  + x + Fx
+    du[4] =  2*vy + x + Fx
     du[5] = -2*vx + y + Fy
-    du[6] =             Fz
+    du[6] =           + Fz
 
     du[7] = -mdot * τ
 end
@@ -292,7 +292,7 @@ BCR4BP equation of motion
 """
 function rhs_bcr4bp_emframe_thrust!(du,u,p,t)
     # unpack arguments
-    μ, μ_3, t0, a_s, ω_s, τ, θ, β, mdot, tmax, dv_fun = p
+    μ, μ_3, t0, a_s, ω_s, τ, γ, β, mdot, tmax, dv_fun = p
     # decompose state
     x, y, z, vx, vy, vz, mass = u
 
@@ -301,13 +301,14 @@ function rhs_bcr4bp_emframe_thrust!(du,u,p,t)
     r2 = sqrt( (x-1+μ)^2 + y^2 + z^2 )
 
     # sun position
-    xs = a_s*cos(ω_s*t + t0)
-    ys = a_s*sin(ω_s*t + t0)
+    θ = ω_s*t + t0
+    xs = a_s*cos(θ)
+    ys = a_s*sin(θ)
     zs = 0.0
     r3 = sqrt( (x-xs)^2 + (y-ys)^2 + (z-zs)^2 )
 
     # compute delta-V vector
-    dir_v = dv_fun(u[1:6], [τ, θ, β])
+    dir_v = dv_fun(μ_3, a_s, θ, u[1:6], [τ, γ, β])
     ts = tmax*dir_v
 
     # position-state derivative
