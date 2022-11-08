@@ -28,7 +28,12 @@ function cart2spherical(sv_cartesian::Array{<:Real,1})
     return sv_spherical
 end
 
-
+# solver settings within fitness function
+# https://diffeq.sciml.ai/stable/solvers/dynamical_solve/#Symplectic-Integrators
+method = RK4()  # CalvoSanz4()
+reltol = 1e-10
+abstol = 1e-10
+#dt = 0.005
 
 param3b = SailorMoon.dyanmics_parameters()
 lps = SailorMoon.lagrange_points(param3b.mu2)
@@ -42,7 +47,7 @@ res = R3BP.ssdc_periodic_xzplane([param3b.mu2,], guess0.x0, guess0.period, fix="
 
 x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
 prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
-sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)#, saveat=LinRange(0, period, n+1))
+sol = solve(prob_cr3bp_stm, method, reltol=reltol, abstol=abstol)#, saveat=LinRange(0, period, n+1))
 monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
 ys0 = R3BP.get_eigenvector(monodromy, true, 1);
 
@@ -70,14 +75,15 @@ _prob_base = ODEProblem(R3BP.rhs_bcr4bp_thrust!, rand(7), [0,1], params)
 propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) where T
     # unpack
     nx = length(x)
-    θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf = x[1:9]  # θf: Sun angle at final time
-    tau1     = x[10 : floor(Int, (nx-9)/2 + 9)]  # discretization numbers are the same for the first & second arc
-    tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
+    θf, tof, eta, r_apogee, raan, ϕ, m0, mf = x[1:8]  # θf: Sun angle at final time
+    tau1     = x[9 : floor(Int, (nx-8)/2 + 8)]  # discretization numbers are the same for the first & second arc
+    tau2     = x[floor(Int, (nx-8)/2 + 9) : end]
     tof_fwd = tof * eta
     tof_bck = tof * (1 - eta)
 
     # construct initial state
     sma = (rp_parking + r_apogee)/2
+    ecc = (r_apogee - rp_parking)/(r_apogee + rp_parking)
     sv0_kep = [sma, ecc, 0.0, raan, 0.0, 0.0]
     θ0 = θf - param3b.oms*(tof_fwd + tof_bck)   # initial Sun angle
     sv0_i = AstrodynamicsBase.kep2cart(sv0_kep, param3b.mu1)
@@ -105,7 +111,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
             u0 = sv0,
             p = params,
         )
-        sol = DifferentialEquations.solve(_prob, Tsit5(), reltol=1e-12, abstol=1e-12)
+        sol = DifferentialEquations.solve(_prob, method, reltol=reltol, abstol=abstol)
         if get_sols
             push!(sols_fwd, sol)
             push!(params_fwd, params)
@@ -125,7 +131,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
             u0 = svf,
             p = params,
         )
-        sol = DifferentialEquations.solve(_prob, Tsit5(), reltol=1e-12, abstol=1e-12)
+        sol = DifferentialEquations.solve(_prob, method, reltol=reltol, abstol=abstol)
         if get_sols
             push!(sols_bck, sol)
             push!(params_bck, params)
@@ -144,9 +150,8 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
 end
 
 function xprint(x)
-    θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf = x[1:9]
+    θf, tof, eta, r_apogee, raan, ϕ, m0, mf = x[1:8]
     @printf("Launch RA   : %1.4f\n", r_apogee)
-    @printf("Launch ECC  : %1.4f\n", ecc)
     @printf("Launch RAAN : %3.4f\n", rad2deg(raan))
     @printf("TOF [day]   : %3.4f\n", tof*param3b.tstar/86400)
     @printf("TOF [TU]    : %3.4f\n", tof)
@@ -156,8 +161,8 @@ end
 
 function get_controls(x)
     nx = length(x)
-    tau1     = x[10 : floor(Int, (nx-9)/2 + 9)]  # discretization numbers are the same for the first & second arc
-    tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
+    tau1     = x[9 : floor(Int, (nx-8)/2 + 8)]  # discretization numbers are the same for the first & second arc
+    tau2     = x[floor(Int, (nx-8)/2 + 9) : end]
     tau1_list = [tau1[3*i-2 : 3*i] for i = 1:Int(n/2)]
     tau2_list = [tau2[3*i-2 : 3*i] for i = 1:n-Int(n/2)]
     tau1 = hcat(tau1_list...)
@@ -172,13 +177,12 @@ n = 20
 bounds_tau = [0,1]
 bounds_γ   = [-π, π]
 bounds_β   = [-π, π]
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
+# θf, tof, eta, sma, raan, ϕ, m0, mf
 xtest = [
     3.171156742785936,
     24.678179489698685,
     0.4188256425390488,
     4.966847320088643,
-    0.9854482488824723,
     10.446876808409478,
     -0.0124160745030169,
     5.031998701118364,
@@ -188,12 +192,12 @@ for i = 1:n
     global xtest = vcat(xtest, [0,0,0])
 end
 
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
+# θf, tof, eta, sma, raan, ϕ, m0, mf
 lx = [
-    2.6, 18, 0.4, 4.0, 0.7, 0.0, -1.0, 1.0, 1.0
+    2.6, 18, 0.4, 4.0, 0.0, -1.0, 1.0, 1.0
 ]
 ux = [
-    3.2, 27, 0.42, 5.4, 0.995, 2π, 1.0, 10.0, 1.0
+    3.2, 27, 0.42, 5.4, 2π, 1.0, 10.0, 1.0
 ]
 for i = 1:n
     global lx = vcat(lx, [bounds_tau[1],bounds_γ[1],bounds_β[1]])
@@ -244,7 +248,7 @@ fitness! = function (g, x)
 end
 
 ip_options = Dict(
-    "max_iter" => 1,   # approx 100
+    "max_iter" => 300,   # approx 100
     "print_level" => 5,
     "acceptable_tol" => 1e-5,
     "constr_viol_tol" => 1e-5,
