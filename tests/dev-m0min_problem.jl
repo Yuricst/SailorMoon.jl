@@ -13,6 +13,23 @@ plotly()
 include("../../julia-r3bp/R3BP/src/R3BP.jl")
 include("../src/SailorMoon.jl")   # relative path to main file of module
 
+function cart2spherical(sv_cartesian::Array{<:Real,1})
+    # unpack state-vector
+    x,y,z,vx,vy,vz = sv_cartesian
+    r = sqrt(x^2 + y^2 + z^2)
+    sv_spherical = [
+        r,
+        atan(y,x),
+        asin(z/r),
+        (x*vx+y*vy+z*vz)/r,
+        (vx*y - x*vy)/(x^2+y^2),
+        (z*(x*vx+y*vy) - (x^2+y^2)*vz)/((x^2+y^2+z^2)*sqrt(x^2+y^2))
+    ]
+    return sv_spherical
+end
+
+
+
 param3b = SailorMoon.dyanmics_parameters()
 lps = SailorMoon.lagrange_points(param3b.mu2)
 
@@ -173,10 +190,10 @@ end
 
 # θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
 lx = [
-    2.6, 18, 0.3, 4.0, 0.7, 0.0, -1.0, 1.0, 1.0
+    2.6, 18, 0.4, 4.0, 0.7, 0.0, -1.0, 1.0, 1.0
 ]
 ux = [
-    3.2, 27, 0.7, 5.0, 0.995, 2π, 1.0, 10.0, 1.0
+    3.2, 27, 0.42, 5.4, 0.995, 2π, 1.0, 10.0, 1.0
 ]
 for i = 1:n
     global lx = vcat(lx, [bounds_tau[1],bounds_γ[1],bounds_β[1]])
@@ -201,7 +218,6 @@ for (ibck,sol_bck) in enumerate(sols_bck)
         linewidth=1.5, label="bck $ibck", linestyle=:solid)
 end
 plot!(pcart; title="Initial guess")
-pcart
 
 # problem settings
 ng = 7
@@ -216,7 +232,11 @@ fitness! = function (g, x)
     sols_fwd, sols_bck = propagate_trajectory(x, true)
     sol_fwd = sols_fwd[end]
     sol_bck = sols_bck[end]
-    g[:] = sol_bck.u[end] - sol_fwd.u[end]
+
+    # convert to spherical coordinates
+    svf_spherical = vcat(cart2spherical(sol_fwd.u[end][1:6]), sol_fwd.u[end][7])
+    svb_spherical = vcat(cart2spherical(sol_bck.u[end][1:6]), sol_bck.u[end][7])
+    g[:] = svb_spherical - svf_spherical #sol_bck.u[end] - sol_fwd.u[end]
 
     # minimize initial mass
     f = sols_fwd[1].u[1][7]
@@ -224,7 +244,7 @@ fitness! = function (g, x)
 end
 
 ip_options = Dict(
-    "max_iter" => 200,   # approx 100
+    "max_iter" => 1,   # approx 100
     "print_level" => 5,
     "acceptable_tol" => 1e-5,
     "constr_viol_tol" => 1e-5,
