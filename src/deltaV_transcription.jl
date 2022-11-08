@@ -51,7 +51,7 @@ end
 
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 """
-function dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+function dv_sun_dir_angles(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
     b2 = [-μS/(μS+1)*as, 0, 0]
     sc = state0
 
@@ -64,15 +64,18 @@ end
 
 Construct delta-V vector, directing along with tidal force vector
 """
-function dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
-    # sun-earth distance vector
-    r = [-as, 0, 0]
-    phi = muS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * transpse(state0)
+function dv_tidal_dir_angles(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+    τ = p[1]
+    # sun-B1 direction unit vector 
+    r = [-as, 0, 0] 
+    r = r / norm(r)
+
+    # first, obtain the direction in sun-B1 rotating frame
+    phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * state0[1:3]
     dir = phi / norm(phi)
 
     return dir * τ
 end
-
 
 
 """
@@ -96,11 +99,14 @@ end
 Construct delta-V vector, directing along with tidal force vector
 """
 
-function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
-    # sun-B1 distance vector 
-    r = [-as, 0, 0]
+function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+    τ = p[1]
+    # sun-B1 direction unit vector 
+    r = [-as, 0, 0] 
+    r = r / norm(r)
+
     # first, obtain the direction in sun-B1 rotating frame
-    phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * transpse(state0)
+    phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * state0[1:3]
     dir = phi / norm(phi)
 
     # convert it to the earth-moon rotating frame
@@ -114,7 +120,7 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, state0::Vector{F
         0       0      1
     ]
 
-    dir = C * transpose(dir)
+    dir = C * dir
 
     return dir * τ
 end
