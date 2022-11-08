@@ -6,7 +6,6 @@ import DiffResults
 using AstrodynamicsBase
 import joptimise
 using Printf
-using JSON
 
 plotly()
 
@@ -22,6 +21,7 @@ println("Halo guess Az_km: $Az_km")
 northsouth = 3   # 1 or 3
 guess0 = R3BP.halo_analytical_construct(param3b.mu2, lp, Az_km, param3b.lstar, northsouth)
 res = R3BP.ssdc_periodic_xzplane([param3b.mu2,], guess0.x0, guess0.period, fix="period")
+res.flag
 
 x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
 prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
@@ -38,7 +38,6 @@ tmax_si = 0.3  # N
 isp_si = 3500  # sec
 mdot_si = tmax_si / (isp_si * 9.81)
 mstar = 2000  # kg
-rp_parking = (6378+200)/param3b.lstar   # parking orbit radius
 
 tmax = AstrodynamicsBase.dimensional2canonical_thrust(
     tmax_si, mstar, param3b.lstar, param3b.tstar
@@ -53,30 +52,29 @@ _prob_base = ODEProblem(R3BP.rhs_bcr4bp_thrust!, rand(7), [0,1], params)
 propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) where T
     # unpack
     nx = length(x)
-    θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf = x[1:9]  # θf: Sun angle at final time
+    θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x[1:9]  # θf: Sun angle at final time
     tau1     = x[10 : floor(Int, (nx-9)/2 + 9)]  # discretization numbers are the same for the first & second arc
     tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
     tof_fwd = tof * eta
     tof_bck = tof * (1 - eta)
-
+    
     # construct initial state
-    sma = (rp_parking + r_apogee)/2
     sv0_kep = [sma, ecc, 0.0, raan, 0.0, 0.0]
     θ0 = θf - param3b.oms*(tof_fwd + tof_bck)   # initial Sun angle
     sv0_i = AstrodynamicsBase.kep2cart(sv0_kep, param3b.mu1)
     sv0 = vcat(inertial2rotating(sv0_i, θ0, 1.0) + [-param3b.mu2,0,0,0,0,0], m0)
-
+    
     # construct final state
     #x0_stm = vcat(LPOArrival.x0, reshape(I(6), (36,)))
     #tspan = [0, ϕ*LPOArrival.period]
     #prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, tspan, [param3b.mu2,])
     #sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)
     svf = vcat(SailorMoon.set_terminal_state(ϕ, param3b, LPOArrival), mf)
-
+    
     # initialize storage
     sols_fwd, sols_bck = [], []
     params_fwd, params_bck = [], []
-
+    
     # forward propagation
     nhalf = Int(n/2)
     tspan_fwd = [0, tof_fwd/nhalf]
@@ -84,7 +82,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         τ, γ, β = tau1[3*i-2 : 3*i]
         params = [param3b.mu2, param3b.mus, θ0, param3b.as, param3b.oms, τ, γ, β, mdot, tmax]
         _prob = remake(
-            _prob_base; tspan=tspan_fwd,
+            _prob_base; tspan=tspan_fwd, 
             u0 = sv0,
             p = params,
         )
@@ -97,14 +95,14 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         θ0 += param3b.oms*sol.t[end]
         sv0 = sol.u[end]
     end
-
+    
     # back propagation
     tspan_bck = [0, -tof_bck/(n-nhalf)]
     for i = 1:n-nhalf
         τ, γ, β = tau2[3*i-2 : 3*i]
         params = [param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, τ, γ, β, mdot, tmax]
         _prob = remake(
-            _prob_base; tspan=tspan_bck,
+            _prob_base; tspan=tspan_bck, 
             u0 = svf,
             p = params,
         )
@@ -117,7 +115,7 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
         θf += param3b.oms*sol.t[end]
         svf = sol.u[end]
     end
-
+    
     # residual
     if get_sols == false
         return svf - sv0
@@ -127,56 +125,33 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
 end
 
 function xprint(x)
-    θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf = x[1:9]
-    @printf("Launch RA   : %1.4f\n", r_apogee)
+    θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x[1:9]
+    @printf("Launch SMA  : %1.4f\n", sma)
     @printf("Launch ECC  : %1.4f\n", ecc)
     @printf("Launch RAAN : %3.4f\n", rad2deg(raan))
     @printf("TOF [day]   : %3.4f\n", tof*param3b.tstar/86400)
-    @printf("TOF [TU]    : %3.4f\n", tof)
     @printf("m0          : %2.4f\n", m0)
     @printf("mf          : %2.4f\n", mf)
-end
+end    
 
-function get_controls(x)
-    nx = length(x)
-    tau1     = x[10 : floor(Int, (nx-9)/2 + 9)]  # discretization numbers are the same for the first & second arc
-    tau2     = x[floor(Int, (nx-9)/2 + 10) : end]
-    tau1_list = [tau1[3*i-2 : 3*i] for i = 1:Int(n/2)]
-    tau2_list = [tau2[3*i-2 : 3*i] for i = 1:n-Int(n/2)]
-    tau1 = hcat(tau1_list...)
-    tau2 = hcat(tau2_list...)
-    return tau1, tau2
-end
-
-
-## Solve problem
 n = 20
 
 bounds_tau = [0,1]
 bounds_γ   = [-π, π]
 bounds_β   = [-π, π]
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
+# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x
 xtest = [
-    3.171156742785936,
-    24.678179489698685,
-    0.4188256425390488,
-    4.966847320088643,
-    0.9854482488824723,
-    10.446876808409478,
-    -0.0124160745030169,
-    5.031998701118364,
-    1.0,
+    2.4, 22, 0.4, 1.8, 0.87, 4.5, 0.02, 1.5, 1.0
 ]
 for i = 1:n
     global xtest = vcat(xtest, [0,0,0])
 end
 
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
 lx = [
-    2.6, 18, 0.3, 4.0, 0.7, 0.0, -1.0, 1.0, 1.0
+    2.6, 18, 0.3, 1.9, 0.7, 0.0, -1.0, 1.0, 1.0
 ]
 ux = [
-    3.2, 27, 0.7, 5.0, 0.995, 2π, 1.0, 10.0, 1.0
+    3.2, 27, 0.7, 2.4, 0.995, 2π, 1.0, 10.0, 1.0
 ]
 for i = 1:n
     global lx = vcat(lx, [bounds_tau[1],bounds_γ[1],bounds_β[1]])
@@ -193,11 +168,11 @@ pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 scatter!(pcart, lps[:,1], lps[:,2], marker=:diamond, color=:red, label="LPs")
 # trajectory
 for (ifwd,sol_fwd) in enumerate(sols_fwd)
-    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd],
+    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd], 
         linewidth=1.5, label="fwd $ifwd", linestyle=:dashdot)
 end
 for (ibck,sol_bck) in enumerate(sols_bck)
-    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck],
+    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck], 
         linewidth=1.5, label="bck $ibck", linestyle=:solid)
 end
 plot!(pcart; title="Initial guess")
@@ -212,7 +187,7 @@ fitness! = function (g, x)
     # evaluate objective & objective gradient (trivial)
     #f = 1       # whichever x corresponds to e.g. mass at LEO
     #g[:] = propagate_trajectory(x, false)
-
+    
     sols_fwd, sols_bck = propagate_trajectory(x, true)
     sol_fwd = sols_fwd[end]
     sol_bck = sols_bck[end]
@@ -224,7 +199,7 @@ fitness! = function (g, x)
 end
 
 ip_options = Dict(
-    "max_iter" => 200,   # approx 100
+    "max_iter" => 1,   # approx 100
     "print_level" => 5,
     "acceptable_tol" => 1e-5,
     "constr_viol_tol" => 1e-5,
@@ -244,14 +219,10 @@ propagate_trajectory(xopt, false)
 dr = sols_bck[end].u[end][1:3] - sols_fwd[end].u[end][1:3]
 dv = sols_bck[end].u[end][4:6] - sols_fwd[end].u[end][4:6]
 gfoo  = zeros(ng)
-ffoo = fitness!(gfoo, xopt)
-println("ffoo: $ffoo")
+fitness!(gfoo, xopt)
 println("gfoo: $gfoo")
 @printf("Position offset = %1.4f [DU]\n", norm(dr))
 @printf("Velocity offset = %1.4f [DU/TU]\n", norm(dv))
-
-xprint(xopt)
-
 
 ## Plot
 cs_fwd = palette([:darkred, :navyblue], max(Int(n/2),2))
@@ -260,26 +231,12 @@ pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 scatter!(pcart, lps[:,1], lps[:,2], marker=:diamond, color=:red, label="LPs")
 # trajectory
 for (ifwd,sol_fwd) in enumerate(sols_fwd)
-    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd],
+    plot!(pcart, Array(sol_fwd)[1,:], Array(sol_fwd)[2,:], color=cs_fwd[ifwd], 
         linewidth=1.5, label="fwd $ifwd", linestyle=:dashdot)
 end
 for (ibck,sol_bck) in enumerate(sols_bck)
-    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck],
+    plot!(pcart, Array(sol_bck)[1,:], Array(sol_bck)[2,:], color=cs_bck[ibck], 
         linewidth=1.5, label="bck $ibck", linestyle=:solid)
 end
 plot!(pcart; title="Solved")
 display(pcart)
-
-# save solution to file
-solution_dict = Dict(
-    "n" => n,
-    "tmax" => tmax,
-    "mdot" => mdot,
-    "lpo_x0" => res.x0,
-    "lpo_period" => res.period,
-    "xopt" => xopt,
-)
-save_filename = joinpath("..", "results", "test_save.json")
-open(save_filename, "w") do f
-    JSON.print(f, solution_dict, 4)
-end

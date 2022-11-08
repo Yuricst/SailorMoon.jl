@@ -127,8 +127,8 @@ propagate_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false) whe
 end
 
 function xprint(x)
-    θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf = x[1:9]
-    @printf("Launch RA   : %1.4f\n", r_apogee)
+    θf, tof, eta, sma, ecc, raan, ϕ, m0, mf = x[1:9]
+    @printf("Launch SMA  : %1.4f\n", sma)
     @printf("Launch ECC  : %1.4f\n", ecc)
     @printf("Launch RAAN : %3.4f\n", rad2deg(raan))
     @printf("TOF [day]   : %3.4f\n", tof*param3b.tstar/86400)
@@ -155,23 +155,15 @@ n = 20
 bounds_tau = [0,1]
 bounds_γ   = [-π, π]
 bounds_β   = [-π, π]
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
+# θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf
 xtest = [
-    3.171156742785936,
-    24.678179489698685,
-    0.4188256425390488,
-    4.966847320088643,
-    0.9854482488824723,
-    10.446876808409478,
-    -0.0124160745030169,
-    5.031998701118364,
-    1.0,
+    2.4, 21.8, 0.5, 4.44, 0.87, 4.5, 0.02, 1.5, 1.0
 ]
 for i = 1:n
     global xtest = vcat(xtest, [0,0,0])
 end
 
-# θf, tof, eta, sma, ecc, raan, ϕ, m0, mf
+# θf, tof, eta, r_apogee, ecc, raan, ϕ, m0, mf
 lx = [
     2.6, 18, 0.3, 4.0, 0.7, 0.0, -1.0, 1.0, 1.0
 ]
@@ -218,8 +210,8 @@ fitness! = function (g, x)
     sol_bck = sols_bck[end]
     g[:] = sol_bck.u[end] - sol_fwd.u[end]
 
-    # minimize initial mass
-    f = sols_fwd[1].u[1][7]
+    # minimize tof
+    f = x[2]
     return f
 end
 
@@ -279,7 +271,7 @@ solution_dict = Dict(
     "lpo_period" => res.period,
     "xopt" => xopt,
 )
-save_filename = joinpath("..", "results", "test_save.json")
+save_filename = joinpath("..", "results", "test_save_mintof.json")
 open(save_filename, "w") do f
     JSON.print(f, solution_dict, 4)
 end
