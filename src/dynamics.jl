@@ -355,7 +355,7 @@ end
 """
     rhs_bcr4bp_thrust!(du,u,p,t)
 
-BCR4BP equation of motion
+BCR4BP equation of motion, centered at Earth-Moon barycenter.
 
 # Arguments
     - `du`: cache array of duative of state-vector

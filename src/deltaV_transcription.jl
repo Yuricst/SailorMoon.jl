@@ -47,34 +47,34 @@ end
 
 
 """
-    dv_sun_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+    dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
 
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 """
-function dv_sun_dir_angles(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
     b2 = [-μS/(μS+1)*as, 0, 0]
-    sc = state0
+    sc = state0[1:3]
 
     dir = (b2-sc) / norm(b2-sc)
-    return dir * τ
+    return dir * control[1]
 end
 
 """
-    dv_tidal_dir_angles(μS::Float64, as::Float64, state0::Vector{Float64}, τ::Float64)
+    dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
 
 Construct delta-V vector, directing along with tidal force vector
 """
-function dv_tidal_dir_angles(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
     τ = p[1]
-    # sun-B1 direction unit vector 
-    r = [-as, 0, 0] 
+    # sun-B1 direction unit vector
+    r = [-as, 0, 0]
     r = r / norm(r)
 
     # first, obtain the direction in sun-B1 rotating frame
     phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * state0[1:3]
     dir = phi / norm(phi)
 
-    return dir * τ
+    return dir * control[1]
 end
 
 
@@ -87,7 +87,7 @@ function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state
     # sun-b1 distance vector
     τ = p[1]
     rs = [as * cos(θ), as * sin(θ), 0]
-    sc = state0[1:3] 
+    sc = state0[1:3]
     dir = (rs - sc) / norm(rs - sc)
 
     return dir * τ
@@ -101,8 +101,8 @@ Construct delta-V vector, directing along with tidal force vector
 
 function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
     τ = p[1]
-    # sun-B1 direction unit vector 
-    r = [-as, 0, 0] 
+    # sun-B1 direction unit vector
+    r = [-as, 0, 0]
     r = r / norm(r)
 
     # first, obtain the direction in sun-B1 rotating frame
@@ -124,7 +124,3 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
 
     return dir * τ
 end
-
-
-
-
