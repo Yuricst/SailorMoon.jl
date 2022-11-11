@@ -28,7 +28,6 @@ plotly()
     rtol = 1e-12
     atol = 1e-12
 
-#### callback functions ###################
     function terminate_condition(u,t,int)
         # Hit earth
         cond1 = sqrt((u[1] + param3b.mu2) ^2 + u[2]^2 + u[3]^2) - (1000 / param3b.lstar)
@@ -36,12 +35,7 @@ plotly()
         cond2 = sqrt((u[1] - (1-param3b.mu2)) ^2 + u[2]^2 + u[3]^2) - (870 / param3b.lstar)
         return - cond1 * cond2
     end
-
-    # terminate condition: hit earth or moon
-    function terminate_affect!(int)
-        terminate!(int)
-    end
-
+    
     # store the apoapsis value
     function apoapsis_cond(u,t,int)
         # condition 1: SC is sufficiently far from the moon
@@ -55,11 +49,7 @@ plotly()
             return NaN
         end
     end
-
-    function apoapsis_affect!(int)
-        return NaN
-    end
-
+    
     # store the periapsis value and terminate
     function periapsis_cond(u,t,int)
         r = sqrt((u[1] + param3b.mu2)^2 + u[2]^2 + u[3]^2)  # SC-earth distance
@@ -72,30 +62,39 @@ plotly()
             return NaN
         end
     end
-
-    function periapsis_affect!(int)
-        terminate!(int)
-    end
-
+    
     # generalized aps condition 
-    function aps_cond(u,i,int)
+    function aps_cond(u,t,int)
         pos = u[1:3] + [param3b.mu2, 0.0, 0.0]
         return dot(pos, u[4:6]) 
     end
-
-    function aps_affect!(int)
-        return NaN
+    
+    # perilune
+    function perilune_cond(u,t,int)
+        r = sqrt((u[1] - (1 - param3b.mu2))^2 + u[2]^2 + u[3]^2)  # SC-Moon distance
+        moon_soi = 66000 / param3b.lstar
+        
+        if r < moon_soi && -t > (10*86400 / param3b.tstar)
+            return dot((u[1:3] - [1 - param3b.mu2, 0.0, 0.0]), u[4:6])
+        else 
+            return NaN
+        end
     end
-end
+    
+    
+    # affect!
+    terminate_affect!(int) = terminate!(int)
+    no_affect!(int) = NaN
 
-function plot_circle(radius, x, y, n=50)
-    circle = zeros(2,n)
-    thetas = LinRange(0.0, 2π, n)
-    for i = 1:n
-        circle[1,i] = radius*cos(thetas[i]) + x
-        circle[2,i] = radius*sin(thetas[i]) + y
+    function plot_circle(radius, x, y, n=50)
+        circle = zeros(2,n)
+        thetas = LinRange(0.0, 2π, n)
+        for i = 1:n
+            circle[1,i] = radius*cos(thetas[i]) + x
+            circle[2,i] = radius*sin(thetas[i]) + y
+        end
+        return circle
     end
-    return circle
 end
 ##########################################
 
@@ -121,10 +120,10 @@ end
 
     ## Grid search parameters: CHANGE HERE
     n = 50
-    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n]
+    ϕ_vec    = [5.27787565803085, 6.0318578948924]   #LinRange(0, 2*pi, n+1)[1:n] #
     epsr_vec = [1e-6]   #10 .^(-12:-6)
     epsv_vec = [1e-6]   #10 .^(-12:-6)
-    θ_vec    = LinRange(0, 2*pi, n+1)[1:n]
+    θ_vec    = [0.125663706, 5.78053048260521]    #LinRange(0, 2*pi, n+1)[1:n]  # [2.890265, 3.015929]     #
     tof_bck  = 150 * 86400 / param3b.tstar
 
 
@@ -156,12 +155,13 @@ end
 
 # include callback functions 
 @everywhere begin
-    terminate_cb = ContinuousCallback(terminate_condition,terminate_affect!; rootfind=false)
-    apoapsis_cb  = ContinuousCallback(apoapsis_cond, apoapsis_affect!; rootfind=false, save_positions=(false,true))
-    periapsis_cb = ContinuousCallback(periapsis_cond, periapsis_affect!)
-    aps_cb  = ContinuousCallback(aps_cond, aps_affect!; rootfind=false, save_positions=(false,true))
-
-    cbs = CallbackSet(terminate_cb, apoapsis_cb, periapsis_cb)
+    terminate_cb = ContinuousCallback(terminate_condition, terminate_affect!; rootfind=false)
+    apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
+    periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
+    # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
+    perilune_cb  = ContinuousCallback(perilune_cond, no_affect!; rootfind=false, save_positions=(false,true))
+    
+    cbs = CallbackSet(terminate_cb, apoapsis_cb, periapsis_cb, perilune_cb)
     # print(cbs)
 
 
@@ -180,64 +180,81 @@ end
 end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
-# integrator parameters here needs to be tuned 
-sim = solve(ensemble_prob, alg, EnsembleDistributed(), trajectories=length(grids),
-            callback=cbs, reltol=rtol, abstol=atol,
+sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
+            callback=cbs, reltol=1e-12, abstol=1e-12,
             save_everystep=true);
 
 
 ## data extraction and make csv
 # make dataframe
-entries = ["phi0", "epsr", "epsv", "thetaf", "rp", "ra", "tof"]
+entries = ["id", "phi0", "epsr", "epsv", "thetaf", "ra", "rp", "dt1", "dt2", "x_ra", "x_rp", "tof", "lfb"]
 df = DataFrame([ name =>[] for name in entries])
 
 pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 
-
+id = 1
 # extract the ensemble simulation
 for (idx,sol) in enumerate(sim)
+    global lfb_count = 0
     
     ϕ0 = grids[idx][1]
     ϵr = grids[idx][2]
     ϵv = grids[idx][3]
     θf = grids[idx][4]
-
-
+    
+    
     if sol.retcode == :Terminated
 #         println(periapsis_cond(sol.u[end], 0.0, 0.0))
         if ~isnan(periapsis_cond(sol.u[end], 0.0, 0.0))  # == true
-            # got to lunar orbit!
-#         println(periapsis_cond(sol.u[end], 0.0, 0.0))
-#         println(terminate_condition(sol.u[end], 0.0, 0.0))
+            t_vec = -sol.t[:]
             rp = sqrt(sol.u[end][1]^2 + sol.u[end][2]^2 + sol[end][3]^2)
-            ra = sqrt(sol.u[end-1][2]^2 + sol.u[end-1][2]^2 + sol[end-1][3]^2)
+            x_rp = sol.u[end]
+            
+            # find apoapsis
+            r_vec = sqrt.((Array(sol)[1,:] .- [param3b.mu2]).^2+Array(sol)[2,:].^2+Array(sol)[3,:].^2)
+            ra, id_ra = findmax(r_vec)
+            x_ra = sol.u[id_ra]
+            dt_ra = - sol.t[id_ra]
+            dt_rp = -sol.t[end] - dt_ra 
+            
+            # flag: lunar flyby? 
+            rm_vec = sqrt.((Array(sol)[1,:] .- [1-param3b.mu2]).^2+Array(sol)[2,:].^2+Array(sol)[3,:].^2)
+            id_lfb = findall(rm_vec .< (66000 / param3b.lstar) .&& t_vec .> (10*86400/param3b.tstar))
+            
+            if ~isempty(id_lfb)
+#                 println("there might be a perilune")
+                for k in id_lfb
+                    if ~isnan(perilune_cond(sol.u[k], sol.t[k], 0.0))
+                        global lfb_count += 1
+                    end
+                end    
+            end
+
+            
             tof = -sol.t[end]
-            push!(df, [ϕ0, ϵr, ϵv, θf, rp, ra, tof])
+            push!(df, [id, ϕ0, ϵr, ϵv, θf, rp, ra, dt_ra, dt_rp, x_ra, x_rp, tof, lfb_count])
             println("idx $idx is a success!")
-            plot!(pcart, Array(sol)[1,:], Array(sol)[2,:], color=:blue, linewidth=1.0, label="sol", linestyle=:solid)
+            plot!(pcart, Array(sol)[1,:], Array(sol)[2,:], color=:blue, linewidth=1.0, label="sol $idx", linestyle=:solid)
 #             println(sol.u, sol.t)
-            # id += 1
+            global id += 1
         end
     end
 end
 
 # print(df)
 CSV.write("grid_search.csv", df)
-tf = time() - t0
-println("total comp. time: $tf")
-
 
 moon = plot_circle(1738/param3b.lstar, 1-param3b.mu2, 0.0)
 earth = plot_circle(6375/param3b.lstar, -param3b.mu2, 0.0)
+moon_soi = plot_circle(66000/param3b.lstar, 1-param3b.mu2, 0.0)
 leo_lb = plot_circle((2000)/param3b.lstar, -param3b.mu2, 0.0)
 leo_ub = plot_circle((6375+1500)/param3b.lstar, -param3b.mu2, 0.0)
 plot!(pcart, leo_lb[1,:], leo_lb[2,:], c=:black, lw=1.0, label="LEO lb")
 plot!(pcart, leo_ub[1,:], leo_ub[2,:], c=:black, lw=1.0, label="LEO ub")
 plot!(pcart, earth[1,:], earth[2,:], c=:green, lw=1.0, label="earth")
 plot!(pcart, moon[1,:], moon[2,:], c=:orange, lw=1.0, label="moon")
+plot!(pcart, moon_soi[1,:], moon_soi[2,:], c=:black, lw=1.0, label="moon soi")
 
-# scatter!(pcart, [-param3b.mu2], [0.0], c=:green, shape=:circle, label="Earth")
-# scatter!(pcart, [1-param3b.mu2], [0.0], c=:yellow, shape=:octagon, label="moon")
 
 display(pcart)
 
