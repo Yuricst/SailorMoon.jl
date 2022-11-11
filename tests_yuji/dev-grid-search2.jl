@@ -180,6 +180,7 @@ end
 end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
+# integrator parameters here needs to be tuned 
 sim = solve(ensemble_prob, alg, EnsembleDistributed(), trajectories=length(grids),
             callback=cbs, reltol=rtol, abstol=atol,
             save_everystep=true);
@@ -189,7 +190,6 @@ sim = solve(ensemble_prob, alg, EnsembleDistributed(), trajectories=length(grids
 # make dataframe
 entries = ["phi0", "epsr", "epsv", "thetaf", "rp", "ra", "tof"]
 df = DataFrame([ name =>[] for name in entries])
-
 
 pcart = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.4)
 
