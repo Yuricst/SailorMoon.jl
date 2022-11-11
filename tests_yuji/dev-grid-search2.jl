@@ -23,6 +23,11 @@ plotly()
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
     include("../src/SailorMoon.jl")   # relative path to main file of module
 
+    # integrator parameters
+    alg = Tsit5()
+    rtol = 1e-12
+    atol = 1e-12
+
 #### callback functions ###################
     function terminate_condition(u,t,int)
         # Hit earth
@@ -109,7 +114,8 @@ end
 
     x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
     prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
-    sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)#, saveat=LinRange(0, period, n+1))
+    # for Halo propagation, keep the tol as tight as possible 
+    sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12) #, saveat=LinRange(0, period, n+1))
     monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
@@ -174,8 +180,8 @@ end
 end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
-sim = solve(ensemble_prob, Tsit5(), EnsembleDistributed(), trajectories=length(grids),
-            callback=cbs, reltol=1e-12, abstol=1e-12,
+sim = solve(ensemble_prob, alg, EnsembleDistributed(), trajectories=length(grids),
+            callback=cbs, reltol=rtol, abstol=atol,
             save_everystep=true);
 
 
