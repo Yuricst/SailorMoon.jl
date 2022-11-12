@@ -27,7 +27,7 @@ function dyanmics_parameters(use_sun::Bool=true)
     gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
     gm_sun = 1.3271244004193938E+11   # GM of Sun
 
-    t_sidereal = 27.3217  *86400        # sec
+    t_sidereal = 27.3217  *86400      # sec
     t_synodic  = 29.530588*86400      # sec
 
     tstar = t_sidereal / (2π)         # sec
@@ -43,7 +43,7 @@ function dyanmics_parameters(use_sun::Bool=true)
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
     oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
-    # oml  = abs(oms)/(1-abs(oms))      # this might be correct? (Boudad 2022 PhD thesis Eq. C.19)
+    oml  = abs(oms)/(1-abs(oms))      # Yuji: I think this is correct (Boudad 2022 PhD thesis Eq. C.19 / P.253)
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
@@ -267,28 +267,28 @@ function rhs_bcr4bp_sb1frame!(du,u,p,t)
     du[3] = u[6]
 
     # earth and moon location
-    xe = μS/(μS+1) - μ2/as *cos(θ)
-    ye = μS/(μS+1) - μ2/as *sin(θ)
+    xe = μS*as/(μS+1) - μ2 *cos(θ)
+    ye = μS*as/(μS+1) - μ2 *sin(θ)
     ze = 0
 
-    xm = μS/(μS+1) + (1-μ2)/as *cos(θ)
-    ym = μS/(μS+1) + (1-μ2)/as *sin(θ)
+    xm = μS*as/(μS+1) + (1-μ2) *cos(θ)
+    ym = μS*as/(μS+1) + (1-μ2) *sin(θ)
     zm = 0
 
     # compute distances
-    r30 = sqrt((-1/(μS+1)- x)^2 + y^2 + z^2)
+    r30 = sqrt((-as/(μS+1)- x)^2 + y^2 + z^2)
     r31 = sqrt((xe - x)^2 + (ye - y)^2 + (ze-z)^2)
     r32 = sqrt((xm - x)^2 + (ym - y)^2 + (zm-z)^2)
     println(r30, " ", r31, " ", r32)
 
 
-    Fx = -(μS/(μS+1))*(x-1/(μS+1))/r30^3 - (1-μ2)/(μS+1)*(x-xe)/r31^3 - μ2/(μS+1)*(x-xm)/r32^3 + Tx
-    Fy = -(μS/(μS+1))*(y-1/(μS+1))/r30^3 - (1-μ2)/(μS+1)*(y-ye)/r31^3 - μ2/(μS+1)*(y-ym)/r32^3 + Ty
-    Fz = -(μS/(μS+1))*(z-1/(μS+1))/r30^3 - (1-μ2)/(μS+1)*(z-ze)/r31^3 - μ2/(μS+1)*(z-zm)/r32^3 + Tz
+    Fx = -(μS)*(x-as/(μS+1))/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
+    Fy = -(μS)*(y-as/(μS+1))/r30^3 - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)*(z-as/(μS+1))/r30^3 - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
     # println(-(μS/(μS+1))*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)/(μS+1)*(x-xe)/r31^3, " ",  - μ2/(μS+1)*(x-xm)/r32^3)
 
 
-    du[4] = 2*vy  + x + Fx
+    du[4] =  2*vy + x + Fx
     du[5] = -2*vx + y + Fy
     du[6] =           + Fz
 
