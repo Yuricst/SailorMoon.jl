@@ -119,11 +119,11 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 50
-    ϕ_vec    = [5.27787565803085, 6.0318578948924]   #LinRange(0, 2*pi, n+1)[1:n] #
-    epsr_vec = [1e-6]   #10 .^(-12:-6)
-    epsv_vec = [1e-6]   #10 .^(-12:-6)
-    θ_vec    = [0.125663706, 5.78053048260521]    #LinRange(0, 2*pi, n+1)[1:n]  # [2.890265, 3.015929]     #
+    n = 100
+    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] #[5.27787565803085, 6.0318578948924]  
+    epsr_vec = 10.0 .^(-9:-6)
+    epsv_vec = 10.0 .^(-9:-6)
+    θ_vec    = LinRange(0, 2*pi, n+1)[1:n]  # [2.890265, 3.015929]     #[0.125663706, 5.78053048260521]    
     tof_bck  = 150 * 86400 / param3b.tstar
 
 
@@ -182,7 +182,7 @@ end
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=true);
+            save_everystep=false);
 
 
 ## data extraction and make csv
