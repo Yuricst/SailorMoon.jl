@@ -54,7 +54,7 @@ plotly()
     function periapsis_cond(u,t,int)
         r = sqrt((u[1] + param3b.mu2)^2 + u[2]^2 + u[3]^2)  # SC-earth distance
         earth_leo_ub = (6357 + 1500) / param3b.lstar
-        earth_leo_lb = 2000 / param3b.lstar
+        earth_leo_lb = 3000 / param3b.lstar
         
         if earth_leo_lb < r < earth_leo_ub
             return dot((u[1:3] + [param3b.mu2, 0.0, 0.0]), u[4:6])
@@ -119,11 +119,11 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 50
-    ϕ_vec    = [5.27787565803085, 6.0318578948924]   #LinRange(0, 2*pi, n+1)[1:n] #
-    epsr_vec = [1e-6]   #10 .^(-12:-6)
-    epsv_vec = [1e-6]   #10 .^(-12:-6)
-    θ_vec    = [0.125663706, 5.78053048260521]    #LinRange(0, 2*pi, n+1)[1:n]  # [2.890265, 3.015929]     #
+    n = 100
+    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] #
+    epsr_vec = 10 .^(-9:-6)
+    epsv_vec = 10 .^(-9:-6)
+    θ_vec    = LinRange(0, 2*pi, n+1)[1:n]  # [2.890265, 3.015929]     #
     tof_bck  = 150 * 86400 / param3b.tstar
 
 
@@ -246,7 +246,7 @@ CSV.write("grid_search.csv", df)
 moon = plot_circle(1738/param3b.lstar, 1-param3b.mu2, 0.0)
 earth = plot_circle(6375/param3b.lstar, -param3b.mu2, 0.0)
 moon_soi = plot_circle(66000/param3b.lstar, 1-param3b.mu2, 0.0)
-leo_lb = plot_circle((2000)/param3b.lstar, -param3b.mu2, 0.0)
+leo_lb = plot_circle((3000)/param3b.lstar, -param3b.mu2, 0.0)
 leo_ub = plot_circle((6375+1500)/param3b.lstar, -param3b.mu2, 0.0)
 plot!(pcart, leo_lb[1,:], leo_lb[2,:], c=:black, lw=1.0, label="LEO lb")
 plot!(pcart, leo_ub[1,:], leo_ub[2,:], c=:black, lw=1.0, label="LEO ub")
