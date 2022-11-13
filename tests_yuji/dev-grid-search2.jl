@@ -42,7 +42,7 @@ plotly()
         r = sqrt((u[1] - (1-param3b.mu2))^2 + u[2]^2 + u[3]^2) # SC-Moon distance
         moon_soi = 5000 / param3b.lstar # define "sphere of influence"
         
-        if sqrt(u[1]^2 + u[2]^2 + u[3]^2) > 1.5 * param3b.lstar
+        if sqrt(u[1]^2 + u[2]^2 + u[3]^2) > 1.5 
             # condition 2: dot product of velocity and position is zero
             return dot((u[1:3] + [param3b.mu2, 0.0, 0.0]), u[4:6])
         else
@@ -54,7 +54,7 @@ plotly()
     function periapsis_cond(u,t,int)
         r = sqrt((u[1] + param3b.mu2)^2 + u[2]^2 + u[3]^2)  # SC-earth distance
         earth_leo_ub = (6357 + 1500) / param3b.lstar
-        earth_leo_lb = 2000 / param3b.lstar
+        earth_leo_lb = 3000 / param3b.lstar
         
         if earth_leo_lb < r < earth_leo_ub
             return dot((u[1:3] + [param3b.mu2, 0.0, 0.0]), u[4:6])
@@ -247,7 +247,7 @@ CSV.write("grid_search.csv", df)
 moon = plot_circle(1738/param3b.lstar, 1-param3b.mu2, 0.0)
 earth = plot_circle(6375/param3b.lstar, -param3b.mu2, 0.0)
 moon_soi = plot_circle(66000/param3b.lstar, 1-param3b.mu2, 0.0)
-leo_lb = plot_circle((2000)/param3b.lstar, -param3b.mu2, 0.0)
+leo_lb = plot_circle((3000)/param3b.lstar, -param3b.mu2, 0.0)
 leo_ub = plot_circle((6375+1500)/param3b.lstar, -param3b.mu2, 0.0)
 plot!(pcart, leo_lb[1,:], leo_lb[2,:], c=:black, lw=1.0, label="LEO lb")
 plot!(pcart, leo_ub[1,:], leo_ub[2,:], c=:black, lw=1.0, label="LEO ub")
