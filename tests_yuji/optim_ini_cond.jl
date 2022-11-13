@@ -34,19 +34,31 @@ LPOArrival = SailorMoon.CR3BPLPO2(
     res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12
 );
 
+# initialize ODE 
+svf_ = zeros(Float64, 1, 7)
+params = [param3b.mu2, param3b.mus, 0.0, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0]
+tspan = [0, -tof_bck]
+prob = ODEProblem(R3BP.rhs_bcr4bp_thrust!, svf_, tspan, params)
+
 function objective(x)
     # using x, generate the trajectory 
-    ϕ0, θf = x[1], x[2]
+    ϕ0, θf, tof = x[1], x[2], x[3]
 
     xf = vcat(SailorMoon.set_terminal_state2(ϕ0, θf, param3b, LPOArrival), 1.0)
 
-    
+    ## make ensemble problems
+    function prob_func(prob, i, repeat)
+        print("\rproblem # $i")
+        remake(prob, u0=xf, p=[param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0],
+                tspan=[0, -tof])
+    end
 
+    cbs = CallbackSet()  # empty as of now, maybe we should add something? (periapsis?)
+    sol = solve(prob_bck, Tsit5(), callback=cbs, reltol=1e-12, abstol=1e-12);
 
-
-
+    # this will allow the trajectories s.t. h = 200km but with really bad flight angle, need to enforce some condition?
     rp_target = 200 + 6375  # altitude of LEO 
-    rp = 
+    rp = sqrt(sol.u[end][1]^2 + sol.u[end][1]^2 + sol.u[end][1]^2)
     f = rp - rp_target 
     return f
 end
@@ -59,11 +71,12 @@ function obj_con(g, x)
     return f
 end
 
-# initial guess
-x0 = [4.0; 4.0]
+# initial guess: ϕ0, θf, tof
+x0 = [4.0; 4.0; ]
+
 # bounds on variables
-lx = [-5.0; -5.0]
-ux = [5.0; 5.0]
+lx = [-5.0; -5.0; 1.3]
+ux = [5.0; 5.0; 1.3]
 
 # bounds on constriants
 lg = [0.0]

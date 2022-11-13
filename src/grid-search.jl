@@ -42,7 +42,7 @@ plotly()
         r = sqrt((u[1] - (1-param3b.mu2))^2 + u[2]^2 + u[3]^2) # SC-Moon distance
         moon_soi = 5000 / param3b.lstar # define "sphere of influence"
         
-        if sqrt(u[1]^2 + u[2]^2 + u[3]^2) > 1.5 * param3b.lstar
+        if sqrt(u[1]^2 + u[2]^2 + u[3]^2) > 1.5 
             # condition 2: dot product of velocity and position is zero
             return dot((u[1:3] + [param3b.mu2, 0.0, 0.0]), u[4:6])
         else
@@ -230,7 +230,6 @@ for (idx,sol) in enumerate(sim)
                 end    
             end
 
-            
             tof = -sol.t[end]
             push!(df, [id, ϕ0, ϵr, ϵv, θf, rp, ra, dt_ra, dt_rp, x_ra, x_rp, tof, lfb_count])
             println("idx $idx is a success!")
