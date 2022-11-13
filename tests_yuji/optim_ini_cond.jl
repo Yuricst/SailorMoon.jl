@@ -4,7 +4,17 @@ x = [ϕ0, θf]
 """
 
 #push!(LOAD_PATH,"../src/")
+using LinearAlgebra
+using DifferentialEquations
+using Plots
+import ForwardDiff
+import DiffResults
+using AstrodynamicsBase
 using joptimise
+using Printf
+using DataFrames
+using JSON
+using CSV
 
 include("../../julia-r3bp/R3BP/src/R3BP.jl")
 include("../src/SailorMoon.jl")   # relative path to main file of module
@@ -37,24 +47,21 @@ LPOArrival = SailorMoon.CR3BPLPO2(
 # initialize ODE 
 svf_ = zeros(Float64, 1, 7)
 params = [param3b.mu2, param3b.mus, 0.0, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0]
-tspan = [0, -tof_bck]
+tspan = [0, -10.0]
 prob = ODEProblem(R3BP.rhs_bcr4bp_thrust!, svf_, tspan, params)
 
-function objective(x)
+function objective(x::T) where T
     # using x, generate the trajectory 
     ϕ0, θf, tof = x[1], x[2], x[3]
 
     xf = vcat(SailorMoon.set_terminal_state2(ϕ0, θf, param3b, LPOArrival), 1.0)
 
     ## make ensemble problems
-    function prob_func(prob, i, repeat)
-        print("\rproblem # $i")
-        remake(prob, u0=xf, p=[param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0],
+    remake(prob, u0=xf, p=[param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0],
                 tspan=[0, -tof])
-    end
 
     cbs = CallbackSet()  # empty as of now, maybe we should add something? (periapsis?)
-    sol = solve(prob_bck, Tsit5(), callback=cbs, reltol=1e-12, abstol=1e-12);
+    sol = solve(prob, Tsit5(), callback=cbs, reltol=1e-12, abstol=1e-12);
 
     # this will allow the trajectories s.t. h = 200km but with really bad flight angle, need to enforce some condition?
     rp_target = 200 + 6375  # altitude of LEO 
@@ -63,27 +70,25 @@ function objective(x)
     return f
 end
 
-
-function obj_con(g, x)
+function obj_con(g::T, x::T) where T
     # compute objective
     f = objective(x)
     g[1] = 0.0
     return f
 end
 
-# initial guess: ϕ0, θf, tof
-x0 = [4.0; 4.0; ]
+# initial guess: ϕ0[rad], θf[rad], tof[T]
+x0 = [5.27787565803085; 0.125663706; 18.8977945731596]
 
 # bounds on variables
-lx = [-5.0; -5.0; 1.3]
-ux = [5.0; 5.0; 1.3]
+lx = [5.0; -0.1; 17.5]
+ux = [5.6; 0.4; 20.5]
 
 # bounds on constriants
 lg = [0.0]
 ug = [0.0]
 # number of constraints
 ng = 1
-
 
 ## run minimizer with IPOPT
 ip_options = Dict(
