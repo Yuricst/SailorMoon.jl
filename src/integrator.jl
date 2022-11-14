@@ -109,11 +109,14 @@ function integrate_rk4(
     # create solution object
     if abs(ts[end]) >= abs(prob.tspan[2])
         retcode = :Success
-    else
-        retcode = :PrematureEnd
     end
     res = RK4Solution(
         us, ts, prob, retcode, "RK4", _event_states, _event_times
     )
     return res
+end
+
+
+function Array(sol::RK4Solution)
+    return hcat(sol.u...)
 end
