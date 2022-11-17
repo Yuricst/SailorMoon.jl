@@ -42,7 +42,7 @@ function dyanmics_parameters(use_sun::Bool=true)
     end
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
+    # oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
     oml  = abs(oms)/(1-abs(oms))      # Yuji: I think this is correct (Boudad 2022 PhD thesis Eq. C.19 / P.253)
 
     # parking radius
@@ -121,7 +121,7 @@ end
 
 """
 
-Right-hand side expression for state-vector in BCR4BP
+Right-hand side expression for state-vector in BCR4BP at Earth-Moon barycenter
 
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
@@ -169,7 +169,8 @@ end
 
 """
 
-Right-hand side expression for state-vector in BCR4BP
+Right-hand side expression for state-vector in BCR4BP in Sun-B1 frame
+(origin = B2 = Sun-B1 barycenter)
 
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
@@ -181,83 +182,31 @@ Right-hand side expression for state-vector in BCR4BP
         as : (sun-B1 distance) / l* (388.709677419)
             l* : Earth-moon distance (384,400 km)
         ωM : Earth-Moon line's angular velocity around E-M barycenter
+            (= 2π/(t_synodic/t_star))
+        ωb : rotating velocity of S-B1 frame 
+            (= 2π*(t_synodic - t_sidereal)/(t_sidereal*t_synodic)*t_star)
         τ  : thrust magnitude (0~1)
         γ  : thrust angle 1
         β  : thrust angle 2
         mdot : mass-flow rate
         tmax : max thrust
     - `t`: time
-"""
-function rhs_bcr4bp_with_mass!(du,u,p,t)
-    # unpack state
-    x, y, z = u[1], u[2], u[3]
-    vx, vy, vz = u[4], u[5], u[6]
-    μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, γ, β, mdot, tmax = p[6], p[7], p[8], p[9], p[10]
 
-    θ = θ0 + ωM * t  # moon angle
-
-    # create Thrust term
-    T = dv_inertial_angles([τ,γ,β])
-    Tx, Ty, Tz = T * tmax / u[7]  # mdot
-
-    # compute distances
-    r30 = sqrt((as + x)^2 + y^2 + z^2)
-    r31 = sqrt((-μ2*cos(θ) - x)^2 + (-μ2*sin(θ) - y)^2 + z^2)
-    r32 = sqrt(((1-μ2)*cos(θ) - x)^2 + ((1-μ2)*sin(θ) - y)^2 + z^2)
-
-    # derivatives of positions
-    du[1] = u[4]
-    du[2] = u[5]
-    du[3] = u[6]
-
-    # forces applied (Sun, Earth, Moon, and thrust term)
-    Fx = μS / r30^3 * (-as-x) + μS/as^3 * as  + (1-μ2) / r31^3 * (-μ2*cos(θ) - x)    + μ2 / r32^3 * ((1-μ2)*cos(θ) - x) + Tx
-    Fy = μS / r30^3 * (-y)      + (1-μ2) / r31^3 * (-μ2*sin(θ) - y)    + μ2 / r32^3 * ((1-μ2)*sin(θ) - y) + Ty
-    Fz = μS / r30^3 * (-z)      + (1-μ2) / r31^3 * (-z)                + μ2 / r32^3 * (-z)                + Tz
-
-    # println(μS / r30^3)
-    println(μS / r30^3 * (-as-x)+ μS/as^3 * as , " ", (1-μ2) / r31^3 * (-μ2*cos(θ) - x), " ",  μ2 / r32^3 * ((1-μ2)*cos(θ) - x))
-
-    du[4] = 2*vy  + x + Fx
-    du[5] = -2*vx + y + Fy
-    du[6] =           + Fz
-
-    du[7] = -mdot * τ
-end
-
-"""
-
-Right-hand side expression for state-vector in BCR4BP
-
-# Arguments
-    - `du`: cache array of duative of state-vector, mutated
-    - `u`: state-vector
-    - `p`: parameters, where p = [μ2, μS, as, θ0, ωM, τ, γ, β, mdot, tmax]
-        m* : mE + mL (6.0455 * 10^22)
-        μ2 : mL / m* (0.012150585609624)
-        μS : mS / m* (0.00000303951)
-        as : (sun-B1 distance) / l* (388.709677419)
-            l* : Earth-moon distance (384,400 km)
-        ωM : Earth-Moon line's angular velocity around E-M barycenter
-        τ  : thrust magnitude (0~1)
-        γ  : thrust angle 1
-        β  : thrust angle 2
-        mdot : mass-flow rate
-        tmax : max thrust
-    - `t`: time
+*If you normalize l* = E-M distance, m* = mE + mM, and t* = t_sidereal/2pi, 
+then ωb = 0.074800, ωM = 0.9252. These values should work in this project. 
 """
 function rhs_bcr4bp_sb1frame!(du,u,p,t)
     # unpack state
     x, y, z = u[1], u[2], u[3]
     vx, vy, vz = u[4], u[5], u[6]
-    μ2, μS, as, θ0, ωM = p[1], p[2], p[3], p[4], p[5]
-    τ, γ, β, mdot, tmax = p[6], p[7], p[8], p[9], p[10]
+    μ2, μS, as, θ0, ωM, ωb = p[1], p[2], p[3], p[4], p[5], p[6]
+    τ, γ, β, mdot, tmax = p[7], p[8], p[9], p[10], p[11]
 
     θ = θ0 + ωM * t  # moon angle
 
     # create Thrust term
-    T = dv_inertial_angles([τ,γ,β])
+    #  T = dv_inertial_angles([τ,γ,β])
+    T = [0.0, 0.0, 0.0]
     Tx, Ty, Tz = T * tmax / u[7]  # mdot
 
 
@@ -267,30 +216,29 @@ function rhs_bcr4bp_sb1frame!(du,u,p,t)
     du[3] = u[6]
 
     # earth and moon location
-    xe = μS*as/(μS+1) - μ2 *cos(θ)
-    ye = μS*as/(μS+1) - μ2 *sin(θ)
+    xe = - μ2 *cos(θ) + as * μS/(μS+1) 
+    ye = - μ2 *sin(θ)
     ze = 0
 
-    xm = μS*as/(μS+1) + (1-μ2) *cos(θ)
-    ym = μS*as/(μS+1) + (1-μ2) *sin(θ)
+    xm = (1-μ2) *cos(θ) + as * μS/(μS+1) 
+    ym = (1-μ2) *sin(θ)
     zm = 0
+    # println(xe, " ", ye, " ", ze)
 
     # compute distances
-    r30 = sqrt((-as/(μS+1)- x)^2 + y^2 + z^2)
-    r31 = sqrt((xe - x)^2 + (ye - y)^2 + (ze-z)^2)
-    r32 = sqrt((xm - x)^2 + (ym - y)^2 + (zm-z)^2)
-    println(r30, " ", r31, " ", r32)
+    r30 = sqrt((-as/(μS+1) - x)^2 + y^2 + z^2)      # SC-Sun
+    r31 = sqrt((xe - x)^2 + (ye - y)^2 + (ze-z)^2)  # SC-earth
+    r32 = sqrt((xm - x)^2 + (ym - y)^2 + (zm-z)^2)  # SC-Moon
+    # println(r30, " ", r31, " ", r32)
 
-
-    Fx = -(μS)*(x-as/(μS+1))/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
-    Fy = -(μS)*(y-as/(μS+1))/r30^3 - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
-    Fz = -(μS)*(z-as/(μS+1))/r30^3 - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
-    # println(-(μS/(μS+1))*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)/(μS+1)*(x-xe)/r31^3, " ",  - μ2/(μS+1)*(x-xm)/r32^3)
-
-
-    du[4] =  2*vy + x + Fx
-    du[5] = -2*vx + y + Fy
-    du[6] =           + Fz
+    Fx = -(μS)*(x+as/(μS+1))/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
+    Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
+    # println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)    
+    
+    du[4] =  2*ωb*vy + ωb^2*x + Fx
+    du[5] = -2*ωb*vx + ωb^2*y + Fy
+    du[6] =                   + Fz
 
     du[7] = -mdot * τ
 end

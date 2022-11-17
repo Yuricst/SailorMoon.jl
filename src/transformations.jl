@@ -6,7 +6,8 @@ Transformations
 """
     transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
 
-Transform state from Earth-Moon rotating frame to Sun-B1 rotating frame.
+Transform state from Earth-Moon rotating frame (origin: E-M barycenter B1) 
+to Sun-B1 rotating frame (origin: S-B1 barycenter B2).
 Careful with sign of ωs!! (should be negative)
 """
 function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
@@ -15,22 +16,18 @@ function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
     cos_θm = cos(θm)
     sin_θm = sin(θm)
     C = [
-        cos_θm -sin_θm 0
-        sin_θm  cos_θm 0
-        0       0      1
+        cos_θm      -sin_θm   0 0       0      0
+        sin_θm      cos_θm    0 0       0      0
+        0           0         1 0       0      0
+        -ωm*sin_θm -ωm*cos_θm 0 cos_θm -sin_θm 0 
+         ωm*cos_θm -ωm*sin_θm 0 sin_θm  cos_θm 0
+         0          0         0 0       0      1
     ]
-    Cdot = [
-        -ωm*sin_θm -ωm*cos_θm 0
-         ωm*cos_θm -ωm*sin_θm 0
-         0          0         1
-    ]
-    state_conv = vcat(
-        C*state[1:3],
-        C*state[4:6] + Cdot*state[1:3],
-    )
+    state_conv = C * state
+    state_conv = state_conv + [param3b.as, 0,0,0,0,0]
+    
     return state_conv
 end
-
 
 
 """
