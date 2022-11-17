@@ -54,8 +54,8 @@ Base.@kwdef struct CR3BPLPO2 <: AbstractTerminalType
     period::Real    # period
     ys0::Vector       # stable eigenvector at x0
     prob_cr3bp_stm::ODEProblem
-    ϵr::Real
-    ϵv::Real
+    ϵr::Real   # separate epsilon
+    ϵv::Real   # separate epsilon
     method=Tsit5()
     reltol::Real=1e-12
     abstol::Real=1e-12
