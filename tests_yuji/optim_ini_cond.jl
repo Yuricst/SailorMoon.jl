@@ -8,6 +8,7 @@ using LinearAlgebra
 using DifferentialEquations
 using Plots
 import ForwardDiff
+using ForwardDiff: Dual
 import DiffResults
 using AstrodynamicsBase
 using joptimise
@@ -50,11 +51,17 @@ params = [param3b.mu2, param3b.mus, 0.0, param3b.as, param3b.oms, 0.0, 0.0, 0.0,
 tspan = [0, -10.0]
 prob = ODEProblem(R3BP.rhs_bcr4bp_thrust!, svf_, tspan, params)
 
-function objective(x::T) where T
+function objective(x::AbstractVector{T}) where T
     # using x, generate the trajectory 
+    # ϕ0  = ForwardDiff.value(x[1])
+    # θf  = ForwardDiff.value(x[2])
+    # tof = ForwardDiff.value(x[3])
     ϕ0, θf, tof = x[1], x[2], x[3]
 
+    # println("test test test: ", ϕ0, " ", θf)
     xf = vcat(SailorMoon.set_terminal_state2(ϕ0, θf, param3b, LPOArrival), 1.0)
+
+    println("xf: ", xf)
 
     ## make ensemble problems
     remake(prob, u0=xf, p=[param3b.mu2, param3b.mus, θf, param3b.as, param3b.oms, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -64,13 +71,14 @@ function objective(x::T) where T
     sol = solve(prob, Tsit5(), callback=cbs, reltol=1e-12, abstol=1e-12);
 
     # this will allow the trajectories s.t. h = 200km but with really bad flight angle, need to enforce some condition?
-    rp_target = 200 + 6375  # altitude of LEO 
+    rp_target = (200 + 6375) / param3b.lstar  # altitude of LEO 
     rp = sqrt(sol.u[end][1]^2 + sol.u[end][1]^2 + sol.u[end][1]^2)
-    f = rp - rp_target 
+    f = (rp - rp_target)^2 * 10000
     return f
 end
 
-function obj_con(g::T, x::T) where T
+
+function obj_con(g::AbstractVector{T}, x::AbstractVector{T}) where T
     # compute objective
     f = objective(x)
     g[1] = 0.0
@@ -93,10 +101,11 @@ ng = 1
 ## run minimizer with IPOPT
 ip_options = Dict(
     "max_iter" => 2500,   # 1500 ~ 2500
-    "tol" => 1e-6
+    "tol" => 1e-12
 )
 
-xopt, fopt, info = minimize(obj_con, x0, ng; lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt", options=ip_options, derivatives=ForwardAD());
+# currently using automatic differentiation
+xopt, fopt, info = minimize(obj_con, x0, ng; lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt", options=ip_options);
 
 println("Done with IPOPT!")
 println(info)
