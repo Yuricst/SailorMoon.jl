@@ -8,6 +8,7 @@ import ForwardDiff
 import DiffResults
 import FiniteDiff
 
+include("integrator.jl")
 include("deltaV_transcription.jl")
 include("dynamics.jl")
 include("transformations.jl")

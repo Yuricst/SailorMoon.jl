@@ -44,13 +44,14 @@ function dyanmics_parameters(use_sun::Bool=true)
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
     # oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
     oml  = abs(oms)/(1-abs(oms))      # Yuji: I think this is correct (Boudad 2022 PhD thesis Eq. C.19 / P.253)
+    omb  = 2π/(t_synodic/tstar)       # Sun-B1 rotating velocity in S-B1 frame
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
     r_park = r_park_km/lstar          # parking radius, canonical
     v_park = sqrt(mu1/r_park)         # parking velocity, canonical
     return dynamics_params(
-        mu1, mu2, mus, lstar, tstar, as, oms, oml, r_park, v_park
+        mu1, mu2, mus, lstar, tstar, as, oms, oml, omb, r_park, v_park
     )
 end
 
