@@ -47,6 +47,7 @@ Base.@kwdef struct CR3BPLPO <: AbstractTerminalType
     method=Tsit5()
     reltol::Real=1e-12
     abstol::Real=1e-12
+    dt::Real=0.005
 end
 
 Base.@kwdef struct CR3BPLPO2 <: AbstractTerminalType
@@ -59,6 +60,7 @@ Base.@kwdef struct CR3BPLPO2 <: AbstractTerminalType
     method=Tsit5()
     reltol::Real=1e-12
     abstol::Real=1e-12
+    dt::Real=0.005
 end
 
 
