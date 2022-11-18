@@ -83,19 +83,19 @@ function integrate_rk4(
                     push!(_event_states[icb], u_iter)
                     push!(_event_times[icb],  t_iter)
                     _check_sign_cbs[icb] = update  # update the sign of the previous state
-                    
+
                     if save_all == false  # if not saving all the steps, make sure it is saved
                         push!(us, u_iter)
                         push!(ts, t_iter)
                     end
-                    
+
                     # check whether to terminate
                     if cb.affect!() == true
                         # terminate
                         retcode = :Terminated
                         break
                     end
-                    
+
                 else
                     if isnan(update)
                         _check_sign_cbs[icb] = 0
