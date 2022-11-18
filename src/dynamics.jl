@@ -43,9 +43,8 @@ function dyanmics_parameters(use_sun::Bool=true)
     end
 
     oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    # oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml  = abs(oms)/(1-abs(oms))      # Yuji: I think this is correct (Boudad 2022 PhD thesis Eq. C.19 / P.253)
-    omb  = 2π/(t_synodic/tstar)       # Sun-B1 rotating velocity in S-B1 frame
+    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
+    omb  = 2*π * (t_synodic-t_sidereal) / (t_sidereal*t_synodic) * tstar   # Sun-B1 rotating velocity in S-B1 frame
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
@@ -317,8 +316,6 @@ function rhs_bcr4bp_sb1frame2!(du,u,p,t)
     Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
 #     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)    
     
-
-    ωb = 0.07480000059599223
     du[4] =  2*ωb*vy + ωb^2*x + Fx
     du[5] = -2*ωb*vx + ωb^2*y + Fy
     du[6] =                   + Fz
