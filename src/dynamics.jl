@@ -184,7 +184,7 @@ Right-hand side expression for state-vector in BCR4BP in Sun-B1 frame
             l* : Earth-moon distance (384,400 km)
         ωM : Earth-Moon line's angular velocity around E-M barycenter
             (= 2π/(t_synodic/t_star))
-        ωb : rotating velocity of S-B1 frame 
+        ωb : rotating velocity of S-B1 frame
             (= 2π*(t_synodic - t_sidereal)/(t_sidereal*t_synodic)*t_star)
         τ  : thrust magnitude (0~1)
         γ  : thrust angle 1
@@ -193,8 +193,8 @@ Right-hand side expression for state-vector in BCR4BP in Sun-B1 frame
         tmax : max thrust
     - `t`: time
 
-*If you normalize l* = E-M distance, m* = mE + mM, and t* = t_sidereal/2pi, 
-then ωb = 0.074800, ωM = 0.9252. These values should work in this project. 
+*If you normalize l* = E-M distance, m* = mE + mM, and t* = t_sidereal/2pi,
+then ωb = 0.074800, ωM = 0.9252. These values should work in this project.
 """
 function rhs_bcr4bp_sb1frame!(du,u,p,t)
     # unpack state
@@ -217,11 +217,11 @@ function rhs_bcr4bp_sb1frame!(du,u,p,t)
     du[3] = u[6]
 
     # earth and moon location
-    xe = - μ2 *cos(θ) + as * μS/(μS+1) 
+    xe = - μ2 *cos(θ) + as * μS/(μS+1)
     ye = - μ2 *sin(θ)
     ze = 0
 
-    xm = (1-μ2) *cos(θ) + as * μS/(μS+1) 
+    xm = (1-μ2) *cos(θ) + as * μS/(μS+1)
     ym = (1-μ2) *sin(θ)
     zm = 0
     # println(xe, " ", ye, " ", ze)
@@ -235,8 +235,8 @@ function rhs_bcr4bp_sb1frame!(du,u,p,t)
     Fx = -(μS)*(x+as/(μS+1))/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
     Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
     Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
-    # println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)    
-    
+    # println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
+
     du[4] =  2*ωb*vy + ωb^2*x + Fx
     du[5] = -2*ωb*vx + ωb^2*y + Fy
     du[6] =                   + Fz
@@ -248,9 +248,9 @@ end
 """
 
 Right-hand side expression for state-vector in "reduced" BCR4BP in Sun-B1 frame
-(origin = Sun). This EoM is exactly the same to the rhs_bcr4bp_emframe_thrust! after the adequate 
-coorinate transformation. Note that E-M rotating frame's BCR4BP and the original S-B1 rotating frame's BCR4BP 
-are different dynamics, strictly speaking. 
+(origin = Sun). This EoM is exactly the same to the rhs_bcr4bp_emframe_thrust! after the adequate
+coorinate transformation. Note that E-M rotating frame's BCR4BP and the original S-B1 rotating frame's BCR4BP
+are different dynamics, strictly speaking.
 
 # Arguments
     - `du`: cache array of duative of state-vector, mutated
@@ -263,7 +263,7 @@ are different dynamics, strictly speaking.
             l* : Earth-moon distance (384,400 km)
         ωM : Earth-Moon line's angular velocity around E-M barycenter
             (= 2π/(t_synodic/t_star))
-        ωb : rotating velocity of S-B1 frame 
+        ωb : rotating velocity of S-B1 frame
             (= 2π*(t_synodic - t_sidereal)/(t_sidereal*t_synodic)*t_star)
         τ  : thrust magnitude (0~1)
         γ  : thrust angle 1
@@ -272,8 +272,8 @@ are different dynamics, strictly speaking.
         tmax : max thrust
     - `t`: time
 
-*If you normalize l* = E-M distance, m* = mE + mM, and t* = t_sidereal/2pi, 
-then ωb = 0.074800, ωM = 0.9252. These values should work in this project. 
+*If you normalize l* = E-M distance, m* = mE + mM, and t* = t_sidereal/2pi,
+then ωb = 0.074800, ωM = 0.9252. These values should work in this project.
 """
 function rhs_bcr4bp_sb1frame2!(du,u,p,t)
     # unpack state
@@ -296,7 +296,7 @@ function rhs_bcr4bp_sb1frame2!(du,u,p,t)
     du[3] = u[6]
 
     # earth and moon location
-    xe = - μ2 *cos(θ) + as 
+    xe = - μ2 *cos(θ) + as
     ye = - μ2 *sin(θ)
     ze = 0
 
@@ -314,8 +314,8 @@ function rhs_bcr4bp_sb1frame2!(du,u,p,t)
     Fx = -(μS)*(x)/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
     Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
     Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
-#     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)    
-    
+#     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
+
     du[4] =  2*ωb*vy + ωb^2*x + Fx
     du[5] = -2*ωb*vx + ωb^2*y + Fy
     du[6] =                   + Fz
