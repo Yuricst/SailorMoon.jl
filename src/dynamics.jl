@@ -13,6 +13,7 @@ Base.@kwdef struct dynamics_params <: AbstractParameterType
     as::Real
     oms::Real
     oml::Real
+    omb::Real
     r_park::Real
     v_park::Real
 end
