@@ -14,6 +14,7 @@ include("dynamics.jl")
 include("transformations.jl")
 include("initialize_ode.jl")
 include("propagator.jl")
+include("integrator.jl")
 include("fitness.jl")
 
 

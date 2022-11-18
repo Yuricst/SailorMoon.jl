@@ -244,7 +244,7 @@ fitness! = function (g, x)
     g[:] = svb_spherical - svf_spherical #sol_bck.u[end] - sol_fwd.u[end]
 
     # minimize initial mass + tof
-    f = sols_fwd[1].u[1][7] + 0.05 * x[2]
+    f = sols_fwd[1].u[1][7] + 0.01 * x[2]
     return f
 end
 

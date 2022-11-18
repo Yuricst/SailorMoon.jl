@@ -4,7 +4,7 @@ Initial & Terminal condition
 
 """
 
-Providing the initial state of the SC
+Provide the initial state of the SC
 
 # Arguments
     - `param3b::dynamics_params`: 3bp parameters
@@ -15,7 +15,7 @@ Providing the initial state of the SC
     - `θ1`  : initial E-M line's angle w.r.t. Sun-B1 line
 """
 
-function set_initial_state(param3b::dynamics_params, param_vinf, θ1)
+function set_initial_state(param3b::dynamics_params, param_vinf, θ1, ballistic_time::Real=0.0)
     dv1, long, lat = param_vinf[1], param_vinf[2], param_vinf[3]
 
     # get the initial state of the earth
@@ -31,8 +31,16 @@ function set_initial_state(param3b::dynamics_params, param_vinf, θ1)
     v_E_sc = param3b.v_park * [sin(long), cos(long), 0]
     Δv_in  = dv1 * [sin(long), cos(long), 0]  #[cos(long)*cos(lat), cos(long)*sin(lat), sin(lat)]
 
+    # ballistic flight over some time
+    state0 = vcat(r_E_sc, v_E_sc) + vcat([0,0,0], Δv_in)
+    if ballistic_time > 0
+        statef = AstrodynamicsBase.keplerder_nostm(param3b.mu1, state0, 0.0, ballistic_time, 1e-12, 20)
+    else
+        statef = state0
+    end
+
     # take sum of Earth position + parking orbit + delta-V
-    return earth0_in + vcat(r_E_sc, v_E_sc)[:] + vcat([0,0,0], Δv_in)[:]
+    return earth0_in + statef
 end
 
 
@@ -65,7 +73,7 @@ end
 
 
 """
-    set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
+    set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival::CR3BPLPO, use_rk4::Bool=true)
 
 Providing the terminal state of the SC based on arrival to manifold.
 
@@ -78,7 +86,7 @@ Providing the terminal state of the SC based on arrival to manifold.
 # assumtion
     The initial velocity direction: the directions s.t. the SC is on the CR3BP invariant manifold...?
 """
-function set_terminal_state(ϕ, param3b::AbstractParameterType, LPOArrival::CR3BPLPO)
+function set_terminal_state(ϕ, param3b::AbstractParameterType, LPOArrival::CR3BPLPO, use_rk4::Bool=true)
     # propagate the periodic orbit until ϕT.
     x0_stm = vcat(LPOArrival.x0, reshape(I(6), (36,)))[:]
     _prob = remake(
@@ -87,10 +95,16 @@ function set_terminal_state(ϕ, param3b::AbstractParameterType, LPOArrival::CR3B
         u0 = x0_stm,
         p=[param3b.mu2]
     )
-    sol = DifferentialEquations.solve(
-        _prob, LPOArrival.method,
-        reltol = LPOArrival.reltol, abstol = LPOArrival.abstol
-    )
+    if use_rk4
+        sol = integrate_rk4(
+            _prob, LPOArrival.dt
+        )
+    else
+        sol = DifferentialEquations.solve(
+            _prob, LPOArrival.method,
+            reltol = LPOArrival.reltol, abstol = LPOArrival.abstol
+        )
+    end
     x_tf = sol.u[end][1:6]
     stm = transpose(reshape(sol.u[end][7:end], (6, 6)))
 
