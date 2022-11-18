@@ -10,7 +10,7 @@ Transform state from Earth-Moon rotating frame (origin: E-M barycenter B1)
 to Sun-B1 rotating frame (origin: S-B1 barycenter B2).
 Careful with sign of ωs!! (should be negative)
 """
-function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
+function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real, as::Real)
     ωm = -ωs
     θm = π - θs
     cos_θm = cos(θm)
@@ -24,7 +24,7 @@ function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
          0          0         0 0       0      1
     ]
     state_conv = C * state
-    state_conv = state_conv + [param3b.as, 0,0,0,0,0]
+    state_conv = state_conv + [as, 0,0,0,0,0]
     
     return state_conv
 end
