@@ -42,7 +42,7 @@ ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 ϵv = 1e-6
 
 LPOArrival = SailorMoon.CR3BPLPO2(
-    res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12
+    res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
 );
 
 # initialize ODE 
