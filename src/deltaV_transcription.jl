@@ -36,7 +36,7 @@ end
 """
     dv_inertial_angles(mu::Float64, state0::Vector{Float64}, vinf_params)
 
-Construct delta-V vector based on angles w.r.t. inertial frame
+Construct delta-V vector based on angles w.r.t. inertial frame (Sun-B1 frame)
 """
 function dv_inertial_angles(vinf_params)
     # unpack dv-parameters
@@ -50,6 +50,7 @@ end
     dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
 
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
+Frame: Sun-B1 rotating frame. origin = E-M barycenter (B1) 
 """
 function dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
     b2 = [-μS/(μS+1)*as, 0, 0]
@@ -59,13 +60,29 @@ function dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, contro
     return dir * control[1]
 end
 
+
+"""
+    dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+
+Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
+Frame: Sun-B1 rotating frame. origin = B2 
+"""
+function dv_sun_dir_angles2(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+    b2 = [0.0, 0, 0]
+    sc = state0[1:3]
+
+    dir = (b2-sc) / norm(b2-sc)
+    return dir * control[1]
+end
+
 """
     dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
 
-Construct delta-V vector, directing along with tidal force vector
+Construct delta-V vector, directing along with tidal force vector in the Sun-B1 frame
+Frame: Sun-B1 rotating frame. origin = B1 (E-M barycenter)
 """
 function dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
-    τ = p[1]
+    τ = control[1]
     # sun-B1 direction unit vector
     r = [-as, 0, 0]
     r = r / norm(r)
@@ -77,6 +94,25 @@ function dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, cont
     return dir * control[1]
 end
 
+
+"""
+    dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+
+Construct delta-V vector, directing along with tidal force vector in the Sun-B1 frame
+Frame: Sun-B1 rotating frame. origin = B2 
+"""
+function dv_tidal_dir_angles2(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+    τ = control[1]
+    # sun-B1 direction unit vector
+    r = [-as, 0, 0]
+    r = r / norm(r)
+
+    # first, obtain the direction in sun-B1 rotating frame
+    phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * (state0[1:3] - [as,0,0])
+    dir = phi / norm(phi)
+
+    return dir * control[1]
+end
 
 """
     dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
@@ -123,4 +159,12 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
     dir = C * dir
 
     return dir * τ
+end
+
+
+"""
+dummy function for the no thrust mode
+"""
+function dv_no_thrust(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+    return [0.0, 0.0, 0.0]
 end
