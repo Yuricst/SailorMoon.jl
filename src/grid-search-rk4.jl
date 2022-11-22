@@ -157,7 +157,7 @@ using Distributed
 
     ## data extraction and make csv
     # make dataframe
-    entries = ["id", "phi0", "epsr", "epsv", "thetaf", "ra", "rp", "dt1", "dt2", "x_ra", "x_rp", "tof", "m0", "lfb"]
+    entries = ["id", "phi0", "epsr", "epsv", "thetaf", "rp", "ra", "dt1", "dt2", "x_ra", "x_rp", "tof", "m0", "lfb"]
     df = DataFrame([ name =>[] for name in entries])
     id = 1
 
