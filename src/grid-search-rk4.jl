@@ -21,8 +21,18 @@ using Distributed
 
 
     # some inputs needed for the thrust profile
-    mdot = 0.0
-    tmax = 0.0
+    tmax_si = 280e-3 * 4  # N
+    isp_si = 1800 # sec
+    mdot_si = tmax_si / (isp_si * 9.81)
+    mstar = 2500  # kg
+
+    tmax = AstrodynamicsBase.dimensional2canonical_thrust(
+        tmax_si, mstar, param3b.lstar, param3b.tstar
+    )
+    mdot = AstrodynamicsBase.dimensional2canonical_mdot(
+        mdot_si, mstar, param3b.tstar
+    )
+
     dv_fun = SailorMoon.dv_no_thrust
 
     global earth_leo_ub = 9000 / param3b.lstar   # 10000 / param3b.lstar  # km
@@ -106,11 +116,11 @@ using Distributed
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 50
+    n = 120
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
     ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
-    epsr_vec = [1e-6]  #10 .^(-12:-6)
-    epsv_vec = [1e-6]# 10 .^(-12:-6)
+    epsr_vec = 10 .^(-9:-5)
+    epsv_vec = 10 .^(-9:-5)
     tof_bck  = 120 * 86400 / param3b.tstar
 
     # include callback functions 
@@ -167,7 +177,7 @@ using Distributed
         global sol  = SailorMoon.integrate_rk4(prob_base, 0.001, cbs, false)
         
         if sol.t[end] > prob_base.tspan[2]
-            println("$i is terminated!")
+            println(\r"$i is terminated!")
             t_vec = -sol.t
             
             rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
@@ -199,7 +209,7 @@ using Distributed
                         global lfb_count += 1
                     end
                 end    
-                print(" ->> lfb_count; $lfb_count")
+                # print(" ->> lfb_count; $lfb_count")
             end
 
             tof = -sol.t[end]
@@ -221,7 +231,7 @@ using Distributed
     end
 
     # println(df)
-    CSV.write("grid_search2.csv", df)
+    CSV.write("grid_search1124.csv", df)
         
     # moon = plot_circle(1-param3b.mu2, param3b.as , 0.0)
     # earth = plot_circle(param3b.mu2, param3b.as, 0.0)
