@@ -63,17 +63,15 @@ function transform_earthIne_to_EMrot(state::Vector, θ::Real, ωm::Real, μ2::Re
     # transform
     state_r = rotmat * state
     return state_r
-
-    return state_conv
 end
 
 
-function transform_sb1_to_EearthIne(state_earthIne::Vector, θm::Real, ωm::Real, μ2::Real, as::Real)
+function transform_sb1_to_EearthIne(state_sb1::Vector, θm::Real, ωm::Real, μ2::Real, as::Real)
     cos_θm = cos(θm)
     sin_θm = sin(θm)
     
     # step 1: SunB1 -> EM rot
-    state_ = state_earthIne + [-as, 0, 0, 0, 0, 0]
+    state_ = state_sb1 + [-as, 0, 0, 0, 0, 0]
 
     rot_mat1 = inv([
         cos_θm      -sin_θm   0 0       0      0
@@ -104,3 +102,41 @@ function transform_sb1_to_EearthIne(state_earthIne::Vector, θm::Real, ωm::Real
     return state_EarthIne
 end
 
+
+function transform_EearthIne_to_sb1(state_earthIne::Vector, θm::Real, ωm::Real, μ2::Real, as::Real)
+    # EarthIne -> EMrot
+    # move the orign from earth to B1
+    state = state_earthIne - [μ2*cos(θm), μ2*sin(θm), 0, 0, 0, 0]
+        
+    # construct transformation matrix
+    cos_θm = cos(θm)
+    sin_θm = sin(θm)
+    rotmat = inv(
+        [
+            cos_θm -sin_θm 0.0 0.0 0.0 0.0
+            sin_θm cos_θm 0.0 0.0 0.0 0.0
+            0.0 0.0 1.0 0.0 0.0 0.0
+            -ωm*sin_θm -ωm*cos_θm 0.0 cos_θm -sin_θm 0.0
+            ωm*cos_θm -ωm*sin_θm 0.0 sin_θm cos_θm 0.0
+            0.0 0.0 0.0 0.0 0.0 1.0
+        ],
+    )
+    # transform
+    state_em = rotmat * state
+
+    println("state_em: ", state_em)
+
+    # EMrot -> SB1
+    C = [
+        cos_θm      -sin_θm   0 0       0      0
+        sin_θm      cos_θm    0 0       0      0
+        0           0         1 0       0      0
+        -ωm*sin_θm -ωm*cos_θm 0 cos_θm -sin_θm 0 
+         ωm*cos_θm -ωm*sin_θm 0 sin_θm  cos_θm 0
+         0          0         0 0       0      1
+    ]
+    state_ = C * state_em
+    state_sb1 = state_ + [as, 0,0,0,0,0]
+    
+    return state_sb1
+end
