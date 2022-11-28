@@ -124,7 +124,6 @@ function transform_EearthIne_to_sb1(state_earthIne::Vector, θm::Real, ωm::Real
     # transform
     state_em = rotmat * state
 
-    println("state_em: ", state_em)
 
     # EMrot -> SB1
     C = [
