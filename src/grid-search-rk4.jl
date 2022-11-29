@@ -85,6 +85,16 @@ using Distributed
         end
         
     end
+
+    # terminate if the SC is sufficiently close to the earth 
+    function proximity_earth_cond(u,t,int)
+        θm0 = prob_base.p[4]
+        θm = θm0 + param3b.oml * t
+        r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
+        return r - 12000 / param3b.lstar
+    end
+    
+
         
     terminate_affect!() = true
     no_affect!() = false
@@ -127,8 +137,8 @@ using Distributed
     apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!)
     periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
     perilune_cb  = ContinuousCallback(perilune_cond, no_affect!)
-    cbs = [apoapsis_cb, periapsis_cb, perilune_cb];
-
+    prixmity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
+    cbs = [apoapsis_cb, prixmity_earth_cb, perilune_cb];
 
     ## make initial conditions 
     grids = []
@@ -167,7 +177,7 @@ using Distributed
 
     ## data extraction and make csv
     # make dataframe
-    entries = ["id", "phi0", "epsr", "epsv", "thetaf", "rp", "ra", "dt1", "dt2", "x_ra", "x_rp", "tof", "m0", "lfb"]
+    entries = ["id", "phi0", "epsr", "epsv", "thetaf", "rp", "ra", "dt1", "dt2", "x_ini", "x_ra", "x_rp", "tof", "m0", "lfb"]
     df = DataFrame([ name =>[] for name in entries])
     id = 1
 
@@ -176,6 +186,7 @@ using Distributed
         global prob_base  = remake(prob_base, u0=grids[i][5], p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, mdot, tmax, dv_fun])
         global sol  = SailorMoon.integrate_rk4(prob_base, 0.001, cbs, false)
         
+        # did SC hit proximity of the earth? 
         if sol.t[end] > prob_base.tspan[2]
             println(\r"$i is terminated!")
             t_vec = -sol.t
@@ -198,13 +209,10 @@ using Distributed
                         + (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(prob_base.p[4].+param3b.oml.*sol.t)).^2
                         +  hcat(sol.u...)[3,:].^2)
             id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .&& t_vec .> (10*86400/param3b.tstar))
-            
-    #         println(sol.event_states)
-        
+                    
             if ~isempty(id_lfb)
                 for k in id_lfb
     #                 print("\r$k   ")
-    #                 println(perilune_cond(sol.u[k], sol.t[k], 0.0))
                     if ~isnan(perilune_cond(sol.u[k], sol.t[k], 0.0))
                         global lfb_count += 1
                     end
@@ -216,14 +224,36 @@ using Distributed
             m0 = sol.u[end][end]
             
             if ra > 2.0
-                # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
-                    
                 ϕ0  = grids[i][1]
                 ϵr  = grids[i][2]
                 ϵv  = grids[i][3]
                 θsf = grids[i][4]
-                push!(df, [id, ϕ0, ϵr, ϵv, θsf, rp, ra, dt_ra, dt_rp, x_ra, x_rp, tof,  m0, lfb_count])
+                x_ini = sol.u[1]
+
+                # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
+                # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
+                
+                # Using Keplar 2 body problem, find the rp analytically
+                r_entry = sol.u[end][1:end]
+                θmf = pi - θsf
+                θm0 = θmf - param3b.oml * sol.t[end]
+
+                r_entry_EIne = transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
+                h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
+                coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
+                sma, ecc, inc, OMEGA, omega, nu = coe_entry
+
+                rp_kep = sma * (1-ecc)
+                ra_kep = sma * (1+ecc)
+                
+
+
+
+
+
+
+
+                push!(df, [id, ϕ0, ϵr, ϵv, θsf, rp, ra, dt_ra, dt_rp, x_ini, x_ra, x_rp, tof,  m0, lfb_count])
                 global id += 1
             
             end
