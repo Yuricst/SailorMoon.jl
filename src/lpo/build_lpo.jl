@@ -1,7 +1,6 @@
 """
 build a LPO object and save it as a BSON file 
 """
-using BSON 
 
 include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
