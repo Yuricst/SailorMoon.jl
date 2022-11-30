@@ -127,10 +127,10 @@ using Distributed
 
     ## Grid search parameters: CHANGE HERE
     n = 120
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
-    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
-    epsr_vec = 10 .^(-9:-5)
-    epsv_vec = 10 .^(-9:-5)
+    θs_vec   = [180/180*pi] #LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
+    ϕ_vec    = [0.0] # LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
+    epsr_vec = 10.0 .^(-6)
+    epsv_vec = 10.0 .^(-6)
     tof_bck  = 120 * 86400 / param3b.tstar
 
     # include callback functions 
@@ -177,7 +177,9 @@ using Distributed
 
     ## data extraction and make csv
     # make dataframe
-    entries = ["id", "phi0", "epsr", "epsv", "thetaf", "rp", "ra", "dt1", "dt2", "x_ini", "x_ra", "x_rp", "tof", "m0", "lfb"]
+    entries = ["id", "phi0", "epsr", "epsv", "thetaf",
+             "rp_kep", "ra_kep", "ra", "dt1", "dt2",
+              "x_ini", "x_ra", "x_rp", "tof", "m0", "lfb"]
     df = DataFrame([ name =>[] for name in entries])
     id = 1
 
@@ -188,80 +190,95 @@ using Distributed
         
         # did SC hit proximity of the earth? 
         if sol.t[end] > prob_base.tspan[2]
-            println(\r"$i is terminated!")
-            t_vec = -sol.t
+            println("$i is terminated!")
             
-            rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
-            x_rp = sol.u[end]
+            # Using Keplar 2 body problem, find the rp analytically
+            θsf = grids[i][4]
+            r_entry = sol.u[end][1:6]
+            θmf = pi - θsf
+            θm0 = θmf + param3b.oml * sol.t[end]
 
-            # find apoapsis      
-            r_vec = sqrt.((hcat(sol.u...)[1,:] .+ param3b.mu2.*cos.(prob_base.p[4] .+ param3b.oml .* sol.t) .- [param3b.as]).^2
-                        .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(prob_base.p[4] .+ param3b.oml .* sol.t)).^2
-                        .+  hcat(sol.u...)[3,:].^2)
+            r_entry_EIne = SailorMoon.transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
+            h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
+            println(θm0)
+            println(r_entry_EIne[1:3], r_entry_EIne[4:6])
+            println(sol.u[end])
 
-            ra, id_ra = findmax(r_vec)
-            x_ra  = sol.u[id_ra]
-            dt_ra = - sol.t[id_ra]
-            dt_rp = - sol.t[end] - dt_ra 
-
-            # flag: lunar flyby? 
-            rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(prob_base.p[4].+param3b.oml.*sol.t) .- [param3b.as]).^2
-                        + (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(prob_base.p[4].+param3b.oml.*sol.t)).^2
-                        +  hcat(sol.u...)[3,:].^2)
-            id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .&& t_vec .> (10*86400/param3b.tstar))
-                    
-            if ~isempty(id_lfb)
-                for k in id_lfb
-    #                 print("\r$k   ")
-                    if ~isnan(perilune_cond(sol.u[k], sol.t[k], 0.0))
-                        global lfb_count += 1
-                    end
-                end    
-                # print(" ->> lfb_count; $lfb_count")
-            end
-
-            tof = -sol.t[end]
-            m0 = sol.u[end][end]
-            
-            if ra > 2.0
-                ϕ0  = grids[i][1]
-                ϵr  = grids[i][2]
-                ϵv  = grids[i][3]
-                θsf = grids[i][4]
-                x_ini = sol.u[1]
-
-                # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
-                
-                # Using Keplar 2 body problem, find the rp analytically
-                r_entry = sol.u[end][1:end]
-                θmf = pi - θsf
-                θm0 = θmf - param3b.oml * sol.t[end]
-
-                r_entry_EIne = transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
-                h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
+            # we want SC to leave from Earth in CCW direction 
+            if h_entry[3] > 0.0
                 coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
                 sma, ecc, inc, OMEGA, omega, nu = coe_entry
 
                 rp_kep = sma * (1-ecc)
                 ra_kep = sma * (1+ecc)
-                
+                println("rp_kep", rp_kep)
+                println("ra_kep", ra_kep)
 
+                if ra_kep > 2.0
+                    # generate state @ periapsis
+                    x_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
+                    x_rp = SailorMoon.transform_EearthIne_to_sb1(x_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
+                    
+                    # obtian the eccentric anomaly & mean anomaly at entrance
+                    cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
+                    sinE = sqrt(1-ecc^2) * sin(nu) / (1 + cos(nu))
+                    E = atan(sinE, cosE)
+                    M = E - ecc*sin(E)
+                    n = sqrt(param3b.mu1 / sma^3) 
+                    tof_finale = abs(M / n)
 
+                    tof_tot = -sol.t[end] + tof_finale
 
+                    t_vec = -sol.t
+                    # rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
+                    # x_rp = sol.u[end]
 
+                    # find apoapsis      
+                    r_vec = sqrt.((hcat(sol.u...)[1,:] .+ param3b.mu2.*cos.(prob_base.p[4] .+ param3b.oml .* sol.t) .- [param3b.as]).^2
+                                .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(prob_base.p[4] .+ param3b.oml .* sol.t)).^2
+                                .+  hcat(sol.u...)[3,:].^2)
 
+                    ra, id_ra = findmax(r_vec)
+                    x_ra  = sol.u[id_ra]
+                    dt_ra = - sol.t[id_ra]
+                    dt_rp = tof_tot - dt_ra 
 
+                    # flag: lunar flyby? 
+                    rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(prob_base.p[4].+param3b.oml.*sol.t) .- [param3b.as]).^2
+                                + (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(prob_base.p[4].+param3b.oml.*sol.t)).^2
+                                +  hcat(sol.u...)[3,:].^2)
+                    id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
+                            
+                    if ~isempty(id_lfb)
+                        for k in id_lfb
+                            if ~isnan(perilune_cond(sol.u[k], sol.t[k], 0.0))
+                                global lfb_count += 1
+                            end
+                        end    
+                        # print(" ->> lfb_count; $lfb_count")
+                    end
 
-                push!(df, [id, ϕ0, ϵr, ϵv, θsf, rp, ra, dt_ra, dt_rp, x_ini, x_ra, x_rp, tof,  m0, lfb_count])
-                global id += 1
+                    m0 = sol.u[end][end]
             
+                    ϕ0  = grids[i][1]
+                    ϵr  = grids[i][2]
+                    ϵv  = grids[i][3]
+                    x_ini = sol.u[1]
+
+                    # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
+                    # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
+                
+                    push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
+                               rp_kep, ra_kep, ra, dt_ra, dt_rp, 
+                               x_ini, x_ra, x_rp, tof_tot,  m0, lfb_count])
+                    global id += 1
+                end
             end
         end
     end
 
     # println(df)
-    CSV.write("grid_search1124.csv", df)
+    CSV.write("grid_search1129.csv", df)
         
     # moon = plot_circle(1-param3b.mu2, param3b.as , 0.0)
     # earth = plot_circle(param3b.mu2, param3b.as, 0.0)
@@ -281,3 +298,4 @@ using Distributed
     # display(ptraj)
 
 end
+

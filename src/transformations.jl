@@ -84,7 +84,6 @@ function transform_sb1_to_EearthIne(state_sb1::Vector, θm::Real, ωm::Real, μ2
     state_emrot = rot_mat1 * state_
 
     # step 2: EM rot to Earth Inertial
-    ωm = param3b.oml
 
     rot_mat2 = [
         cos_θm -sin_θm 0.0 0.0 0.0 0.0
@@ -123,7 +122,6 @@ function transform_EearthIne_to_sb1(state_earthIne::Vector, θm::Real, ωm::Real
     )
     # transform
     state_em = rotmat * state
-
 
     # EMrot -> SB1
     C = [
