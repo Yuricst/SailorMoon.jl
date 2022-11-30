@@ -137,3 +137,28 @@ function transform_EearthIne_to_sb1(state_earthIne::Vector, θm::Real, ωm::Real
     
     return state_sb1
 end
+
+
+"""
+convert the initial parameters (rp, ra, alpha) into the initial state in the SB1 frame 
+"""
+function paramIni_to_sb1(rp::Real, α::Real, ra::Real, θm::Real, ωm ::Real, μ2::Real, as::Real)
+    # build an initial state in Earth inertial frame
+    sma = (rp + ra) / 2
+    v = sqrt((1-μ2) * (2/rp - 1/sma))
+    
+    state_i_EIne = [
+        rp*cos(α), 
+        rp*sin(α), 
+        0,
+        -v*sin(α),
+        v*cos(α),
+        0
+    ] 
+    println("state_EIne: ", state_i_EIne)
+    
+    # EarthIne -> Sunb1
+    state_i_sb1 = SailorMoon.transform_EearthIne_to_sb1(state_i_EIne, θm, ωm, μ2, as)
+    
+    return state_i_sb1
+end

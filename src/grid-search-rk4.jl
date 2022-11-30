@@ -178,7 +178,8 @@ using Distributed
     ## data extraction and make csv
     # make dataframe
     entries = ["id", "phi0", "epsr", "epsv", "thetaf",
-             "rp_kep", "ra_kep", "ra", "dt1", "dt2",
+              "rp_kep", "ra_kep", "alpha",  # important guys
+              "ra", "dt1", "dt2",
               "x_ini", "x_ra", "x_rp", "tof", "m0", "lfb"]
     df = DataFrame([ name =>[] for name in entries])
     id = 1
@@ -245,8 +246,8 @@ using Distributed
 
                     # flag: lunar flyby? 
                     rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(prob_base.p[4].+param3b.oml.*sol.t) .- [param3b.as]).^2
-                                + (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(prob_base.p[4].+param3b.oml.*sol.t)).^2
-                                +  hcat(sol.u...)[3,:].^2)
+                                +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(prob_base.p[4].+param3b.oml.*sol.t)).^2
+                                +   hcat(sol.u...)[3,:].^2)
                     id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
                             
                     if ~isempty(id_lfb)
@@ -257,6 +258,25 @@ using Distributed
                         end    
                         # print(" ->> lfb_count; $lfb_count")
                     end
+
+                    # obtain α
+                    θs0 = θsf - param3b.oms * tof_tot
+                    θm0 = π - θs0
+                    rE = [
+                        param3b.as - param3b.mu2 * cos(θm0),
+                        -param3b.mu2 * sin(θm0),
+                        0.0
+                    ]
+
+                    # r_sc - r_E
+                    vec = x_rp[1:3] - rE 
+                    x_unit = [1.0, 0.0, 0.0]
+                    α = acos(dot(vec, x_unit) / norm(vec))
+
+                    if cross(x_unit, vec)[3] <= 0
+                        α = -α
+                    end
+
 
                     m0 = sol.u[end][end]
             
@@ -269,7 +289,8 @@ using Distributed
                     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
                 
                     push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
-                               rp_kep, ra_kep, ra, dt_ra, dt_rp, 
+                               rp_kep, ra_kep, α, 
+                               ra, dt_ra, dt_rp, 
                                x_ini, x_ra, x_rp, tof_tot,  m0, lfb_count])
                     global id += 1
                 end
