@@ -4,6 +4,7 @@ using LinearAlgebra
 using Plots
 using DifferentialEquations
 using Roots
+using BSON
 import ForwardDiff
 import DiffResults
 import FiniteDiff

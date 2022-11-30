@@ -2,9 +2,10 @@
 build a LPO object and save it as a BSON file 
 """
 
-include("../../julia-r3bp/R3BP/src/R3BP.jl")
+include("../../../julia-r3bp/R3BP/src/R3BP.jl")
 
-function build_lpo(lp::Int=2, Az_km::Real=1200.0, northsouth::Integer=3, dt::Real==0.005)
+
+function build_lpo(lp::Int=2, Az_km::Real=1200.0, northsouth::Integer=3, dt::Real=0.005)
 
     param3b = dyanmics_parameters()
     lps = lagrange_points(param3b.mu2)
@@ -26,14 +27,14 @@ function build_lpo(lp::Int=2, Az_km::Real=1200.0, northsouth::Integer=3, dt::Rea
         ns = "S"
     end 
 
-    filename = "lpo_L" * string(lp) * "_" * string(int(Az_km)) * "km_" * ns * ".bson"
+    filename = "lpo_L" * string(lp) * "_" * string(Int(Az_km)) * "km_" * ns * ".bson"
     bson((filename), Dict(:x0 => res.x0, :period => res.period, :ys0 => ys0))
 
 end
 
 
 
-function construct_lpo(filename, type::Int, epsr::Real=1e-6, epsv::Real=1e-6, abstol::Real=1e-12, reltol::Real=1e-12, dt::Real=0.005)
+function load_lpo(filename, type::Int=1, epsr::Real=1e-6, epsv::Real=1e-6, abstol::Real=1e-12, reltol::Real=1e-12, dt::Real=0.005)
     _load_dict = BSON.load(filename)
     x0_stm = vcat(_load_dict[:x0], reshape(I(6), (6^2,)))[:]
     prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
