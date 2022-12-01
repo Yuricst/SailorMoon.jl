@@ -25,6 +25,13 @@ mdot = AstrodynamicsBase.dimensional2canonical_mdot(
 )
 
 
+params = [
+    param3b.mu2, param3b.mus, param3b.as, 0.0, param3b.oml, param3b.omb, 0.0, 0.0, 0.0, 0.0, 0.0,
+    dv_no_thrust
+]    
+_prob_base = ODEProblem(rhs_bcr4bp_sb1frame2!, zeros(7,1), [0, -10.0], params);
+
+
 function unpack_x(x::AbstractVector{T}, verbose::Bool=true) where T
     # unpack
     nx = length(x)
@@ -176,51 +183,3 @@ function multishoot_trajectory(x::AbstractVector{T}, get_sols::Bool=false, verbo
         return res, sol_param_list, [sol_ballistic_fwd,sol_ballistic_bck], tofs
     end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-dt = 0.001
-
-param3b = dyanmics_parameters()
-lps = lagrange_points(param3b.mu2)
-
-lp = 2
-Az_km = 1200.0
-println("Halo guess Az_km: $Az_km")
-northsouth = 3   # 1 or 3
-guess0 = R3BP.halo_analytical_construct(param3b.mu2, lp, Az_km, param3b.lstar, northsouth)
-res = R3BP.ssdc_periodic_xzplane([param3b.mu2,], guess0.x0, guess0.period, fix="period")
-
-x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
-prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
-sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)#, saveat=LinRange(0, period, n+1))
-monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
-ys0 = R3BP.get_eigenvector(monodromy, true, 1);
-
-# arrival LPO object
-LPOArrival = SailorMoon.CR3BPLPO(
-    res.x0, res.period, ys0, prob_cr3bp_stm, 1e-6, Tsit5(), 1e-12, 1e-12, 0.005
-);
-
-
