@@ -129,7 +129,7 @@ function propagate_arc!(sv0, θ0, tspan, dt, x_control, get_sols::Bool, sol_para
     return sv_iter
 end
 
-multishoot_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false, verbose::Bool=false) where T
+function multishoot_trajectory(x::AbstractVector{T}, get_sols::Bool=false, verbose::Bool=false) where T
     # unpack decision vector
     x_LEO, x_mid, x_LPO, tofs, θs = unpack_x(x)
     
@@ -144,7 +144,10 @@ multishoot_trajectory = function (x::AbstractVector{T}, get_sols::Bool=false, ve
     )
     
     # propagate midpoint backward
-    svm0 = x_mid[1:7]  # state-vector at midpoint, [r,v,mass]
+    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0_cart, x_mid[7])
+
     svf_mid_bck = propagate_arc!(
         svm0, θs[2], [0, -tofs[2]/n_arc], dt, x_mid[10 : end],
         get_sols, sol_param_list, "mid_bck_arc"
