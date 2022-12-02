@@ -211,8 +211,8 @@ function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state
     dir = (rs - sc) / norm(rs - sc)
 
     # add furhter rotation in gamma and beta
-    γ = control[2]
-    β = control[3]
+    γ = p[2]
+    β = p[3]
     
     sin_β = sin(β)
     cos_β = cos(β)
@@ -263,8 +263,8 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
     dir = C * dir
 
     # add furhter rotation in gamma and beta
-    γ = control[2]
-    β = control[3]
+    γ = p[2]
+    β = p[3]
     
     sin_β = sin(β)
     cos_β = cos(β)
