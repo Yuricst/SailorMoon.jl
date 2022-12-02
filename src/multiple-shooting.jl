@@ -56,7 +56,7 @@ function unpack_x(x::AbstractVector{T}, verbose::Bool=true) where T
     return x_LEO, x_mid, x_LPO, tofs, θs
 end
 
-function get_LEO_state(x_LEO, θs, verbose::Bool=false) 
+function get_LEO_state(x_LEO, θs, dir_func, verbose::Bool=false) 
     rp_input, ra_input, α = x_LEO[1:3]
     sv0_sunb1 = vcat(
         paramIni_to_sb1(rp, α, ra, θm0, param3b.oml, param3b.mu2, param3b.as), 
@@ -74,7 +74,7 @@ function get_LEO_state(x_LEO, θs, verbose::Bool=false)
     # ballistic propagation with small time-steps
     params = [
         param3b.mu2, param3b.mus, param3b.as, pi-θs[1], param3b.oml, param3b.omb, 0.0, 0.0, 0.0, mdot, tmax,
-        dv_sun_dir_angles
+        dir_func
     ]
     
     _prob = remake(_prob_base; tspan=[0,ballistic_time], u0 = sv0_sunb1, p = params)
@@ -113,7 +113,7 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
     return sol_ballistic_bck.u[end], θ_iter, sol_ballistic_bck
 end
 
-function propagate_arc!(sv0, θ0, tspan, dt, x_control, get_sols::Bool, sol_param_list, name::String)
+function propagate_arc!(sv0, θ0, tspan, dt, x_control, dir_func, get_sols::Bool, sol_param_list, name::String)
     sv_iter = [el for el in sv0]
     θ_iter = 1*θ0
     for i = 1:n_arc
@@ -121,7 +121,7 @@ function propagate_arc!(sv0, θ0, tspan, dt, x_control, get_sols::Bool, sol_para
         
         params = [
             param3b.mu2, param3b.mus, param3b.as, pi - θ_iter, param3b.oml, param3b.omb, τ, γ, β, mdot, tmax,
-            dv_sun_dir_angles
+            dir_func
         ]
         _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
         sol = integrate_rk4(_prob, dt);
@@ -136,7 +136,7 @@ function propagate_arc!(sv0, θ0, tspan, dt, x_control, get_sols::Bool, sol_para
     return sv_iter
 end
 
-function multishoot_trajectory(x::AbstractVector{T}, get_sols::Bool=false, verbose::Bool=false) where T
+function multishoot_trajectory(x::AbstractVector{T}, dir_func, get_sols::Bool=false, verbose::Bool=false) where T
     # unpack decision vector
     x_LEO, x_mid, x_LPO, tofs, θs = unpack_x(x)
     
@@ -144,7 +144,7 @@ function multishoot_trajectory(x::AbstractVector{T}, get_sols::Bool=false, verbo
     sol_param_list = []
     
     # propagate from LEO forward
-    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, verbose)
+    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, dir_func, verbose)
     svf_LEO = propagate_arc!(
         sv0_LEO, θ0_leo, [0, tofs[1]/n_arc], dt, x_LEO[5 : end],
         get_sols, sol_param_list, "leo_arc"
@@ -156,20 +156,20 @@ function multishoot_trajectory(x::AbstractVector{T}, get_sols::Bool=false, verbo
     svm0 = vcat(sv0_cart, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
-        svm0, θs[2], [0, -tofs[2]/n_arc], dt, x_mid[10 : end],
+        svm0, θs[2], [0, -tofs[2]/n_arc], dt, x_mid[10 : end], dir_func
         get_sols, sol_param_list, "mid_bck_arc"
     )
     
     # propaagte midpoint forward
     svf_mid_fwd = propagate_arc!(
-        svm0, θs[2], [0, tofs[3]/n_arc], dt, x_mid[10+3n_arc : end],
+        svm0, θs[2], [0, tofs[3]/n_arc], dt, x_mid[10+3n_arc : end], dir_func
         get_sols, sol_param_list, "mid_fwd_arc"
     )
     
     # propagate from LPO backward
     sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[4]/n_arc], dt, x_LPO[5 : end],
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[4]/n_arc], dt, x_LPO[5 : end], dir_func
         get_sols, sol_param_list, "lpo_arc"
     )
     

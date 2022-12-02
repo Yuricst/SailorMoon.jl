@@ -6,6 +6,8 @@ using joptimise
 
 # csv file to load the initial solution
 filename = "hogehoge.csv"
+# dv_dir function corresponding to the csv file 
+dir_func = dv_no_thrust   
 
 # load initial guess
 df = DataFrame(CSV.File(filename))
@@ -47,5 +49,5 @@ ig_x_LPO = vcat(
 
 ig_x = vcat(ig_x_LEO, ig_x_mid, ig_x_LPO)
 
-res = multishoot_trajectory(ig_x, false, false) 
+res = multishoot_trajectory(ig_x, dir_func, false, false) 
 
