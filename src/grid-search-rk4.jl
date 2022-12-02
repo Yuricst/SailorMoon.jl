@@ -172,7 +172,6 @@ using Distributed
     params = [param3b.mu2, param3b.mus, param3b.as, pi - grids[1][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.01, 0.01, SailorMoon.dv_sun_dir_angles2]
     prob_base = ODEProblem(SailorMoon.rhs_bcr4bp_sb1frame2_thrust!, svf_, tspan, params)
 
-
     ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
 
     ## data extraction and make csv

@@ -57,7 +57,29 @@ function dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, contro
     sc = state0[1:3]
 
     dir = (b2-sc) / norm(b2-sc)
-    return dir * control[1]
+
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]      
+
+    return control[1] *  rot1 * rot2 * dir  
+
 end
 
 
@@ -72,7 +94,29 @@ function dv_sun_dir_angles2(μS::Real, as::Real, θ::Real, state0::Vector, contr
     sc = state0[1:3]
 
     dir = (b2-sc) / norm(b2-sc)
-    return dir * control[1]
+
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+    
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]
+
+    return control[1] *  rot1 * rot2 * dir  
+
 end
 
 """
@@ -90,8 +134,28 @@ function dv_tidal_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, cont
     # first, obtain the direction in sun-B1 rotating frame
     phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * state0[1:3]
     dir = phi / norm(phi)
+    
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+    
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]
 
-    return dir * control[1]
+    return τ * rot1 * rot2 * dir 
 end
 
 
@@ -111,7 +175,27 @@ function dv_tidal_dir_angles2(μS::Real, as::Real, θ::Real, state0::Vector, con
     phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * (state0[1:3] - [as,0,0])
     dir = phi / norm(phi)
 
-    return dir * control[1]
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+    
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]
+
+    return τ * rot1 * rot2 * dir 
 end
 
 """
@@ -126,7 +210,27 @@ function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state
     sc = state0[1:3]
     dir = (rs - sc) / norm(rs - sc)
 
-    return dir * τ
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+    
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]
+
+    return τ * rot1 * rot2 * dir 
 end
 
 """
@@ -158,7 +262,27 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
 
     dir = C * dir
 
-    return dir * τ
+    # add furhter rotation in gamma and beta
+    γ = control[2]
+    β = control[3]
+    
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    rot1 = [
+        cos_β 0 sin_β
+        0     1 0
+        -sin_β 0 cos_β
+    ]
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ 0
+        0 0 1
+    ]
+
+    return τ * rot1 * rot2 * dir 
 end
 
 
