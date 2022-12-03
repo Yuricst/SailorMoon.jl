@@ -305,7 +305,7 @@ using Distributed
                     xdot_rp = state_rp[4]
                     ydot_rp = state_rp[5]
                     zdot_rp = state_rp[6]
-                    m_rp = 1.0
+                    m_rp = sol.u[end][7]
 
                     # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
                     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
