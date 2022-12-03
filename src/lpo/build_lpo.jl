@@ -37,7 +37,7 @@ end
 function load_lpo(filename, type::Int=1, epsr::Real=1e-6, epsv::Real=1e-6, abstol::Real=1e-12, reltol::Real=1e-12, dt::Real=0.005)
     _load_dict = BSON.load(filename)
     x0_stm = vcat(_load_dict[:x0], reshape(I(6), (6^2,)))[:]
-    prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
+    prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, _load_dict[:period], (param3b.mu2))
 
     if type == 1 
         # CR3BPLPO object 

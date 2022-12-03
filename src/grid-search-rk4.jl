@@ -179,7 +179,10 @@ using Distributed
     entries = ["id", "phi0", "epsr", "epsv", "thetaf",
               "rp_kep", "ra_kep", "alpha",  # important guys
               "ra", "dt1", "dt2",
-              "x_ini", "x_ra", "x_rp", "tof", "m0", "lfb"]
+              "x_ini", "y_ini", "z_ini", "xdot_ini", "ydot_ini", "zdot_ini", "m_ini",
+              "x_ra", "y_ra", "z_ra", "xdot_ra", "ydot_ra", "zdot_ra", "m_ra",
+              "x_rp", "y_rp", "z_rp", "xdot_rp", "ydot_rp", "zdot_rp", "m_rp",
+              "tof", "m0", "lfb"]
     df = DataFrame([ name =>[] for name in entries])
     id = 1
 
@@ -216,8 +219,8 @@ using Distributed
 
                 if ra_kep > 2.0
                     # generate state @ periapsis
-                    x_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
-                    x_rp = SailorMoon.transform_EearthIne_to_sb1(x_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
+                    state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
+                    state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
                     
                     # obtian the eccentric anomaly & mean anomaly at entrance
                     cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
@@ -239,9 +242,16 @@ using Distributed
                                 .+  hcat(sol.u...)[3,:].^2)
 
                     ra, id_ra = findmax(r_vec)
-                    x_ra  = sol.u[id_ra]
                     dt_ra = - sol.t[id_ra]
                     dt_rp = tof_tot - dt_ra 
+
+                    x_ra = sol.u[id_ra][1]
+                    y_ra = sol.u[id_ra][2]
+                    z_ra = sol.u[id_ra][3]
+                    xdot_ra = sol.u[id_ra][4]
+                    ydot_ra = sol.u[id_ra][5]
+                    zdot_ra = sol.u[id_ra][6]
+                    m_ra = sol.u[id_ra][7]                   
 
                     # flag: lunar flyby? 
                     rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(prob_base.p[4].+param3b.oml.*sol.t) .- [param3b.as]).^2
@@ -268,7 +278,7 @@ using Distributed
                     ]
 
                     # r_sc - r_E
-                    vec = x_rp[1:3] - rE 
+                    vec = state_rp[1:3] - rE 
                     x_unit = [1.0, 0.0, 0.0]
                     α = acos(dot(vec, x_unit) / norm(vec))
 
@@ -276,13 +286,26 @@ using Distributed
                         α = -α
                     end
 
-
                     m0 = sol.u[end][end]
             
                     ϕ0  = grids[i][1]
                     ϵr  = grids[i][2]
                     ϵv  = grids[i][3]
-                    x_ini = sol.u[1]
+                    x_ini = sol.u[1][1]
+                    y_ini = sol.u[1][2]
+                    z_ini = sol.u[1][3]
+                    xdot_ini = sol.u[1][4]
+                    ydot_ini = sol.u[1][5]
+                    zdot_ini = sol.u[1][6]
+                    m_ini = sol.u[1][7]
+
+                    x_rp = state_rp[1]
+                    y_rp = state_rp[2]
+                    z_rp = state_rp[3]
+                    xdot_rp = state_rp[4]
+                    ydot_rp = state_rp[5]
+                    zdot_rp = state_rp[6]
+                    m_rp = 1.0
 
                     # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
                     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="no thrust")
@@ -290,7 +313,10 @@ using Distributed
                     push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
                                rp_kep, ra_kep, α, 
                                ra, dt_ra, dt_rp, 
-                               x_ini, x_ra, x_rp, tof_tot,  m0, lfb_count])
+                               x_ini, y_ini, z_ini, xdot_ini, ydot_ini, zdot_ini, m_ini,
+                               x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
+                               x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
+                               tof_tot,  m0, lfb_count])
                     global id += 1
                 end
             end

@@ -168,13 +168,13 @@ end
 """
 transformation from Cartesian frame to cylindrical frame, changing only positions but not velocity 
 """
-function cart2cylind_only_pos(state::Vector{Real})
+function cart2cylind_only_pos(state::Vector)
     x = state[1]
     y = state[2]
     xdot = state[4]
     ydot = state[5]
     r = sqrt(x^2 + y^2)
-    θ = atan(x[2], y[1])
+    θ = atan(y,x)
 
     # might want to use it later...?
     # rdot = (x*xdot + y*ydot) / sqrt(x^2 + y^2)
@@ -187,7 +187,7 @@ end
 """
 transformation from Cartesian frame to cylindrical frame, changing only positions but not velocity 
 """
-function cylind2cart_only_pos(state::Vector{Real})
+function cylind2cart_only_pos(state::Vector)
     r = state[1]
     θ = state[2]
     rdot = state[4]
