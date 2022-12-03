@@ -3,25 +3,19 @@ Generate fitness function
 
 # Arguments
     - `n` : number of sf transcription (discretization per arc)
-    - `SCParam` : [mdot, tmax]
-    - `Propagator` :
-    - `param3b` :
-    - `LPOArrival` :
+    - `dir_func`: reference direction of thrust 
 """
 function get_fitness(
     n::Int,
-    SCparam::Vector{Float64},
-    Propagator::ODEPropagator,
-    param3b::AbstractParameterType,
-    LPOArrival::AbstractTerminalType
+    dir_func
 )
     # number of constraints FIXME ... check if this is correct!
-    ng = 7
+    ng = 14
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res, _, _, _, _ = sf_propagate(x,n,SCparam,Propagator,param3b,LPOArrival)
+        res = multishoot_trajectory(x, dir_func, n, false, false) 
 
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
@@ -29,7 +23,7 @@ function get_fitness(
         return residuals
     end
 
-    nx = 7 + 6*n  # number of decision variables (tof(1),c_launch(4),c_arr(2),tau1(3n),tau2(3n))
+    nx = 12 + 12*n  # number of decision variables 
     storage_ad = DiffResults.JacobianResult(x0)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
@@ -50,11 +44,6 @@ function get_fitness(
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
-    lx = [
-        1.0,          # lower bounds on decision variables
-    ]
-    ux = [
-        1.0,
-    ]                 # upper bounds on decision variables
-    return fitness!, ng, lx, ux, lg, ug
+
+    return fitness!, ng, lg, ug
 end

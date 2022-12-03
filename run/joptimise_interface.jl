@@ -16,6 +16,13 @@ dir_func = SailorMoon.dv_no_thrust
 
 n_arc = 5
 
+# run minimizer with IPOPT
+ip_options = Dict(
+    "max_iter" => 2500,   # 1500 ~ 2500
+    "tol" => 1e-6,
+    "output_file" => "ELET_ipopt.out"
+)
+
 ##################################################
 
 if dir_func == SailorMoon.dv_no_thrust
@@ -62,15 +69,16 @@ ig_x_LPO = vcat(
 )
 
 x0 = vcat(ig_x_LEO, ig_x_mid, ig_x_LPO)
+
 ###########################################################
 # lb, ub of variables 
 lx_leo = vcat(
-    [200/para.m3b.lstar, 0.8*ra,  0.7*α, 1.2*m_rp, 0.7*tof_leo2mid/2],
+    [200/para.m3b.lstar, 0.0,  -pi, 1.2*m_rp, 0.7*tof_leo2mid/2],
     vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
 )
 
 ux_leo = vcat(
-    [250/param3b.lstar, 1.2*ra,  1.3*α, 0.7*m_rp, 1.3*tof_leo2mid/2],
+    [250/param3b.lstar, inf,  pi, 0.7*m_rp, 1.3*tof_leo2mid/2],
     vcat([[1.0,pi,pi] for i = 1:n_arc]...)
 )
 
@@ -98,28 +106,17 @@ ux_lpo = vcat(
 lx = vcat(lx_leo, lx_mid, lx_lpo)
 ux = vcat(ux_leo, ux_mid, ux_lpo)
 
-lg = []
-ug = []
-# number of constraints
-ng = 1
+fitness!, ng, lg, ug = SailorMoon.get_fitness(n_arc, dir_func)
+
+xopt, fopt, info = joptimise.minimize(rosenbrock!, x0, ng;
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+    options=ip_options, outputfile=true);
+
+println("Done with IPOPT!")
+println(info)
+println(xopt)
 
 
-## run minimizer with IPOPT
-# ip_options = Dict(
-#     "max_iter" => 2500,   # 1500 ~ 2500
-#     "tol" => 1e-6,
-#     "output_file" => "test_hogehoge_ipopt.out"
-# )
+# res = SailorMoon.multishoot_trajectory(ig_x, dir_func, n_arc, false, false) 
 
-# xopt, fopt, info = joptimise.minimize(rosenbrock!, x0, ng;
-#     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-#     options=ip_options, outputfile=true);
-
-# println("Done with IPOPT!")
-# println(info)
-# println(xopt)
-
-
-res = SailorMoon.multishoot_trajectory(ig_x, dir_func, n_arc, false, false) 
-
-println("res: ", res)
+# println("res: ", res)
