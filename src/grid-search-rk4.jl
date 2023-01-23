@@ -16,7 +16,7 @@ using Distributed
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
     include("../src/SailorMoon.jl")   # relative path to main file of module
 
-    param3b = SailorMoon.dyanmics_parameters()
+    param3b = SailorMoon.dynamics_parameters()
     lps = SailorMoon.lagrange_points(param3b.mu2)
 
 

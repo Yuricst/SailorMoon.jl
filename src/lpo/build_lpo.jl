@@ -7,7 +7,7 @@ include("../../../julia-r3bp/R3BP/src/R3BP.jl")
 
 function build_lpo(lp::Int=2, Az_km::Real=1200.0, northsouth::Integer=3, dt::Real=0.005)
 
-    param3b = dyanmics_parameters()
+    param3b = dynamics_parameters()
     lps = lagrange_points(param3b.mu2)
 
     println("Halo guess Az_km: $Az_km")

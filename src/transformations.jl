@@ -155,7 +155,7 @@ function paramIni_to_sb1(rp::Real, α::Real, ra::Real, θm::Real, ωm ::Real, μ
         v*cos(α),
         0
     ] 
-    println("state_EIne: ", state_i_EIne)
+    # println("state_EIne: ", state_i_EIne)
     
     # EarthIne -> Sunb1
     state_i_sb1 = SailorMoon.transform_EearthIne_to_sb1(state_i_EIne, θm, ωm, μ2, as)

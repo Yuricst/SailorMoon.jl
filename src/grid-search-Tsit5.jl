@@ -100,7 +100,7 @@ end
 
 @everywhere begin
     t0 = time()
-    param3b = SailorMoon.dyanmics_parameters()
+    param3b = SailorMoon.dynamics_parameters()
     lps = SailorMoon.lagrange_points(param3b.mu2)
 
     ## set up of initial condition (Lyapunov orbit)

@@ -7,39 +7,49 @@ Generate fitness function
 """
 function get_fitness(
     n::Int,
-    dir_func
+    dir_func,
+    x
 )
-    # number of constraints FIXME ... check if this is correct!
+    # number of constraints: 7 states (pos,vel,mass) * 2 
+    # FIXME ... check if this is correct!
     ng = 14
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
         res = multishoot_trajectory(x, dir_func, n, false, false) 
-
+        
         # compute constraints
         residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
         residuals[:] = res[:]
         return residuals
     end
 
-    nx = 12 + 12*n  # number of decision variables 
-    storage_ad = DiffResults.JacobianResult(x0)  # initialize storage for AD
+    nx = 18 + 12*n  # number of decision variables 
+    storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
 
-    # create objective function
-    fitness! = function (g, df, dg, x)
-        # evaluate objective & objective gradient (trivial)
-        f = x[2]       # whichever x corresponds to e.g. mass at LEO
-        df[1:nx] = df_onehot[:]
-        # evalue constraint & constraint gradient
-        ForwardDiff.jacobian!(storage_ad, eval_sft, x)
-        g[:] = storage_ad.value
-        # constraints gradients jacobian
-        dg[:,:] = DiffResults.jacobian(storage_ad)
-        return f
-    end
+    # # create objective function
+    # fitness! = function (g, df, dg, x)
+    #     # evaluate objective & objective gradient (trivial)
+    #     f = x[2]       # whichever x corresponds to e.g. mass at LEO
+    #     df[1:nx] = df_onehot[:]
+    #     # evalue constraint & constraint gradient
+    #     ForwardDiff.jacobian!(storage_ad, eval_sft, x)
+    #     g[:] = storage_ad.value
+    #     # constraints gradients jacobian
+    #     dg[:,:] = DiffResults.jacobian(storage_ad)
+    #     return f
+    # end
+
+        # create objective function
+        fitness! = function (g, x::AbstractVector{T}) where T
+            # evaluate objective & objective gradient (trivial)
+            f = x[2]    # whichever x corresponds to e.g. mass at LEO
+            g[:] = eval_sft(x)
+            return f
+        end
 
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints

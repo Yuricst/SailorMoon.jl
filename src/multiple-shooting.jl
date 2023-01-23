@@ -12,7 +12,7 @@ include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
 ##############################################################
 # set up the basic parameters 
-param3b = dyanmics_parameters()
+param3b = dynamics_parameters()
 tmax_si = 280e-3 * 4   # N
 isp_si = 1800   # sec
 mdot_si = tmax_si / (isp_si * 9.81)
@@ -45,7 +45,7 @@ params = [
 _prob_base = ODEProblem(rhs_bcr4bp_sb1frame2!, zeros(7,1), [0, -10.0], params);
 
 
-function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=true) where T
+function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
     # unpack
     nx = length(x)
     x_LEO = x[1:5+3n_arc]
@@ -112,7 +112,7 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
         param3b.mu2, param3b.mus, param3b.as, pi - θs[3], param3b.oml, param3b.omb, 0.0, 0.0, 0.0, mdot, tmax,
         dv_no_thrust
     ]
-    println("params: ", params)
+    # println("params: ", params)
     _prob = remake(
         _prob_base; tspan=[0,-ballistic_time_back], 
         u0 = svf_sunb1, p = params

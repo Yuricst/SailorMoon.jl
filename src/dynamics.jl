@@ -22,7 +22,7 @@ end
 """
 Get dynamics parameters for Earth-Moon-Sun system
 """
-function dyanmics_parameters(use_sun::Bool=true)
+function dynamics_parameters(use_sun::Bool=true)
     mu2    = 1.215058560962404E-2     # Moon
     mu1    = 1 - mu2                  # Earth
     gm_em  = 4.0350323550225981E+05   # GM of Earth-Moon system
