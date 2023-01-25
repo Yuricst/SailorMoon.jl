@@ -49,8 +49,6 @@ fitness!, ng, lg, ug = SailorMoon.get_fitness(n_arc, dir_func, x0)
 xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
     options=ip_options, outputfile=true, 
-
-
 )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 println(Info)

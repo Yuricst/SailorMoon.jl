@@ -5,7 +5,6 @@ using Plots
 using DifferentialEquations
 using Roots
 using BSON
-using Suppressor
 using CSV
 using DataFrames
 import ForwardDiff
