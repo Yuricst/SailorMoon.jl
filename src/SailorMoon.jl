@@ -5,9 +5,14 @@ using Plots
 using DifferentialEquations
 using Roots
 using BSON
+using Suppressor
+using CSV
+using DataFrames
 import ForwardDiff
 import DiffResults
 import FiniteDiff
+
+
 
 include("lpo/build_lpo.jl")
 include("integrator.jl")
@@ -19,6 +24,7 @@ include("propagator.jl")
 include("integrator.jl")
 include("multiple-shooting.jl")
 include("fitness.jl")
+include("ig_and_bounds.jl")
 
 
 end # module

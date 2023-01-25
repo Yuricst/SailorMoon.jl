@@ -20,7 +20,8 @@ function get_fitness(
         res = multishoot_trajectory(x, dir_func, n, false, false) 
         
         # compute constraints
-        residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize
+        # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
+        residuals = zeros(ng)
         residuals[:] = res[:]
         return residuals
     end
@@ -31,7 +32,7 @@ function get_fitness(
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
 
     # # create objective function
-    # fitness! = function (g, df, dg, x)
+    # fitness! = function (g, df, dg, x::AbstractVector{T}) where T
     #     # evaluate objective & objective gradient (trivial)
     #     f = x[2]       # whichever x corresponds to e.g. mass at LEO
     #     df[1:nx] = df_onehot[:]
@@ -43,13 +44,13 @@ function get_fitness(
     #     return f
     # end
 
-        # create objective function
-        fitness! = function (g, x::AbstractVector{T}) where T
-            # evaluate objective & objective gradient (trivial)
-            f = x[2]    # whichever x corresponds to e.g. mass at LEO
-            g[:] = eval_sft(x)
-            return f
-        end
+    # create objective function
+    fitness! = function (g, x::AbstractVector{T}) where T
+        # evaluate objective & objective gradient (trivial)
+        f = - x[17 + 9*n]    # currently thinking of maximization of mf, given m0 = 1.0
+        g[:] = eval_sft(x)       # constraints (that need to be zero)
+        return f
+    end
 
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
