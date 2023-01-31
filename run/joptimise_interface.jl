@@ -38,7 +38,7 @@ end
 df = DataFrame(CSV.File(filename))
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-row = df[1,:]
+row = df[2,:]
 
 x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, n_arc)
 

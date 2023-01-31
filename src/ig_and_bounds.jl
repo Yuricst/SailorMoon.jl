@@ -15,6 +15,8 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
     θsf = row.thetaf
     ϕ0  = row.phi0
 
+    rE = 6375 # km
+
     # x_LEO = [ra, rp, α, m0, tof, controls...]
     ig_x_LEO = vcat(
         [rp, ra,  α, 1.0, tof_leo2mid/2],
@@ -37,12 +39,12 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
 
     ### lb, ub of variables 
     lx_leo = vcat(
-        [200/param3b.lstar, 0.0,  -pi, 0.7*m_rp, 0.7*tof_leo2mid/2],
+        [(rE+200)/param3b.lstar, 0.0,  -pi, 0.7*m_rp, 0.7*tof_leo2mid/2],
         vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
     )
 
     ux_leo = vcat(
-        [600/param3b.lstar, Inf,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
+        [(rE+600)/param3b.lstar, Inf,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
