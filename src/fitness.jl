@@ -47,8 +47,9 @@ function get_fitness(
     # create objective function
     fitness! = function (g, x::AbstractVector{T}) where T
         # evaluate objective & objective gradient (trivial)
-        f = - x[17 + 9*n]    # currently thinking of maximization of mf, given m0 = 1.0
+        f = 0 #- x[17 + 9*n]    # currently thinking of maximization of mf, given m0 = 1.0
         g[:] = eval_sft(x)       # constraints (that need to be zero)
+        # println("g: ", g)
         return f
     end
 
@@ -56,5 +57,5 @@ function get_fitness(
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
 
-    return fitness!, ng, lg, ug
+    return fitness!, ng, lg, ug, eval_sft
 end

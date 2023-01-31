@@ -42,23 +42,23 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
     )
 
     ux_leo = vcat(
-        [250/param3b.lstar, Inf,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
+        [600/param3b.lstar, Inf,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
     lx_mid = vcat(
-        0.9*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), -Inf, -Inf, -Inf, -Inf, 1.0, 
+        0.8*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), -Inf, -Inf, -Inf, -Inf, 1.0, 
         0.7*tof_leo2mid/2, 0.7*tof_mid2lpo/2, 
         vcat([[0.0,-pi,-pi] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
-        1.1*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), Inf, Inf, Inf, Inf, 1.2*m_rp,
+        1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), Inf, Inf, Inf, Inf, 1.2*m_rp,
         1.3*tof_leo2mid/2, 1.3*tof_mid2lpo/2, 
         vcat([[1.0,0,0] for i = 1:2n_arc]...)
     )
 
     lx_lpo = vcat(
-        [-pi, -pi, 1.0, 0.7*tof_mid2lpo/2],
+        [-pi, -pi, 0.0, 0.7*tof_mid2lpo/2],
         vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
