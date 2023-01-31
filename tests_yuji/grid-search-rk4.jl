@@ -118,7 +118,7 @@ using Distributed
     end
 
 
-    param3b = SailorMoon.dyanmics_parameters()
+    param3b = SailorMoon.dynamics_parameters()
     lps = SailorMoon.lagrange_points(param3b.mu2)
 
     ## set up of initial condition (Lyapunov orbit)
@@ -137,8 +137,8 @@ using Distributed
 
     ## Grid search parameters: CHANGE HERE
     n = 50
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #
-    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]
+    θs_vec   = [3.76991118430775] #LinRange(0, 2*pi, n+1)[1:n]  #    #
+    ϕ_vec    =  [0.628318530717958] #LinRange(0, 2*pi, n+1)[1:n] #
     epsr_vec = [1e-6]   #10 .^(-12:-6)
     epsv_vec = [1e-6]   #10 .^(-12:-6)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -258,7 +258,7 @@ end # end @everywhere
 
 
 # println(df)
-CSV.write("grid_search2.csv", df)
+CSV.write("grid_search0130.csv", df)
     
 # moon = plot_circle(1-param3b.mu2, param3b.as , 0.0)
 # earth = plot_circle(param3b.mu2, param3b.as, 0.0)

@@ -127,8 +127,8 @@ using Distributed
 
     ## Grid search parameters: CHANGE HERE
     n = 120
-    θs_vec   = [180/180*pi] #LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
-    ϕ_vec    = [0.0] # LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
+    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
     epsr_vec = 10.0 .^(-6)
     epsv_vec = 10.0 .^(-6)
     tof_bck  = 120 * 86400 / param3b.tstar
