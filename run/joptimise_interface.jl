@@ -49,10 +49,16 @@ fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(n_arc, dir_func, x0)
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)
-println("ub - x0: ", ux - x0)
-println("x0 - lb: ", x0 - lx)
+# println("ub - x0: ", ux - x0)
+# println("x0 - lb: ", x0 - lx)
+# println("x0: ", x0)
+# println("residual (needs to be 0): ", res)
 
-println("norm of residual: ", res)
+# make sure the initial guess is inbetween ub & lb
+vec = vcat(ux-x0, x0 - lx)
+if any(vec .< 0.0)
+    error("Error: (At least one element of) initial guess is infinging the defined ub/lb.") 
+end
 
 xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",

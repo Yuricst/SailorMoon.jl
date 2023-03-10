@@ -64,7 +64,7 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
         vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [pi, pi, 1.0, 1.3*tof_mid2lpo/2],
+        [pi, pi, 1.5, 1.3*tof_mid2lpo/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
