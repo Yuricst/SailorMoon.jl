@@ -55,7 +55,7 @@ res = eval_sft(x0)
 # println("residual (needs to be 0): ", res)
 
 # make sure the initial guess is inbetween ub & lb
-vec = vcat(ux-x0, x0 - lx)
+vec = vcat(ux - x0, x0 - lx)
 if any(vec .< 0.0)
     error("Error: (At least one element of) initial guess is infinging the defined ub/lb.") 
 end

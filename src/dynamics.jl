@@ -42,9 +42,9 @@ function dynamics_parameters(use_sun::Bool=true)
         as  = 1.0
     end
 
-    oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]
-    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]
-    omb  = 2*π * (t_synodic-t_sidereal) / (t_sidereal*t_synodic) * tstar   # Sun-B1 rotating velocity in S-B1 frame
+    oms   = -2π/(t_synodic/tstar)     # rad/[canonical time]  # Sun-B1 rotating velocity in EM rot frame
+    oml   =  2π/(t_synodic/tstar)     # rad/[canonical time]  # E-M rotating velocity in S-B1 rot frame
+    omb   = 2*π * (t_synodic-t_sidereal) / (t_sidereal*t_synodic) * tstar   # Sun-B1 rotating velocity in S-B1 rot frame
 
     # parking radius
     r_park_km = 6378 + 200            # parking radius, km
@@ -117,7 +117,6 @@ function rhs_cr3bp!(du,u,p,t)
     du[5] = -2*vx + y - ((1-p[1])/r1^3)*y - (p[1]/r2^3)*y;
     du[6] =            -((1-p[1])/r1^3)*z - (p[1]/r2^3)*z;
 end
-
 
 
 """

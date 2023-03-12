@@ -103,7 +103,7 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
 
     # transform to Sun-B1 frame
     svf_sunb1 = vcat(
-        transform_EMrot_to_SunB1(xf, θs[3], param3b.oms, param3b.as),
+        transform_EMrot_to_SunB1(xf, pi - θs[3], param3b.oml, param3b.omb, param3b.as),
         x_LPO[3]   # mf
     )    
         

@@ -49,7 +49,7 @@ function get_fitness(
         # evaluate objective & objective gradient (trivial)
         f = 1 #- x[17 + 9*n]    # currently thinking of maximization of mf, given m0 = 1.0
         g[:] = eval_sft(x)       # constraints (that need to be zero)
-        # println("g: ", g)
+        println("g(res): ", round.(g[:], digits=3))
         return f
     end
 

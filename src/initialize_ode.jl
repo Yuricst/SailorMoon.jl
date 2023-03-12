@@ -158,7 +158,7 @@ function set_terminal_state(ϕ, θm, param3b::AbstractParameterType, LPOArrival:
     end
 
     # coodinate transformation
-    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, π-θm, param3b.oms)  # FIXME is θs appropriate?
+    state_f_SunB1 = transform_EMrot_to_SunB1(state_f, θm, param3b.oml, param3b.omb, param3b.as)  # FIXME is θs appropriate?
 
     return state_f_SunB1
 end

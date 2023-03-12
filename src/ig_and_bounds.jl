@@ -17,12 +17,13 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
 
     rE = 6375 # km
 
-    # x_LEO = [ra, rp, α, m0, tof, controls...]
+    # x_LEO = [rp, ra, α, m0, tof, controls...]
     ig_x_LEO = vcat(
         [rp, ra,  α, 1.0, tof_leo2mid/2],
         vcat([[τ_ig,0,0] for i = 1:n_arc]...)
     )
 
+    # x_mid = [r,theta,z, vx,vy,vz, m, tof_back, tof_forward, controls...]
     ig_x_mid = vcat(
         svm_mid_cyl, tof_leo2mid/2, tof_mid2lpo/2, 
         vcat([[τ_ig,0,0] for i = 1:2n_arc]...)
@@ -44,17 +45,17 @@ function make_ig_bounds(row, τ_ig, n_arc::Int64)
     )
 
     ux_leo = vcat(
-        [(rE+600)/param3b.lstar, Inf,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
+        [(rE+600)/param3b.lstar, 10.0,  pi, 1.2*m_rp, 1.3*tof_leo2mid/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
     lx_mid = vcat(
-        0.8*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), -Inf, -Inf, -Inf, -Inf, 1.0, 
+        0.8*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), -1.0, -Inf, -Inf, -Inf, 1.0, 
         0.7*tof_leo2mid/2, 0.7*tof_mid2lpo/2, 
         vcat([[0.0,-pi,-pi] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
-        1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), Inf, Inf, Inf, Inf, 1.2*m_rp,
+        1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), 1.0, Inf, Inf, Inf, 1.2*m_rp,
         1.3*tof_leo2mid/2, 1.3*tof_mid2lpo/2, 
         vcat([[1.0,0,0] for i = 1:2n_arc]...)
     )
