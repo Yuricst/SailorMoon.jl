@@ -11,6 +11,7 @@ import ForwardDiff
 import DiffResults
 import FiniteDiff
 
+import AstrodynamicsBase
 
 
 include("lpo/build_lpo.jl")
