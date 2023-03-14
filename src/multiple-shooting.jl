@@ -103,7 +103,7 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
 
     # transform to Sun-B1 frame
     svf_sunb1 = vcat(
-        transform_EMrot_to_SunB1(xf, pi - θs[3], param3b.oml, param3b.omb, param3b.as),
+        transform_EMrot_to_SunB1(xf, pi - θs[3], param3b.oml, param3b.as),
         x_LPO[3]   # mf
     )    
         
@@ -128,7 +128,7 @@ end
 
 function propagate_arc!(sv0, θ0, tspan, n_arc, dt, x_control, dir_func, get_sols::Bool, sol_param_list, name::String)
     sv_iter = [el for el in sv0]
-    θ_iter = 1*θ0
+    θ_iter = θ0
     for i = 1:n_arc
         τ, γ, β = x_control[1+3*(i-1) : 3*i]
         
@@ -136,8 +136,13 @@ function propagate_arc!(sv0, θ0, tspan, n_arc, dt, x_control, dir_func, get_sol
             param3b.mu2, param3b.mus, param3b.as, pi - θ_iter, param3b.oml, param3b.omb, τ, γ, β, mdot, tmax,
             dir_func
         ]
+        # _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
+        # sol = integrate_rk4(_prob, dt);
+
+        # Tsit5()
         _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
-        sol = integrate_rk4(_prob, dt);
+        sol = solve(_prob, Tsit5(), reltol=1e-12, abstol=1e-12)
+
         #sol = DifferentialEquations.solve(_prob, RK4(), reltol=1e-10, abstol=1e-10)
         if get_sols
             push!(sol_param_list, [sol, params, name])

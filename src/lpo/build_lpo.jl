@@ -16,7 +16,7 @@ function build_lpo(lp::Int=2, Az_km::Real=1200.0, northsouth::Integer=3, dt::Rea
 
     x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
     prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
-    sol = solve(prob_cr3bp_stm, Tsit5(), reltol=1e-12, abstol=1e-12)#, saveat=LinRange(0, period, n+1))
+    sol = solve(prob_cr3bp_stm, alg=Tsit5(), reltol=1e-12, abstol=1e-12)#, saveat=LinRange(0, period, n+1))
     monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
     ys0 = R3BP.get_eigenvector(monodromy, true, 1);
 

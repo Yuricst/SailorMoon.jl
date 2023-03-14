@@ -11,14 +11,12 @@ using Distributed
     using DataFrames
     using JSON
     using CSV
-    plotly()
 
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
     include("../src/SailorMoon.jl")   # relative path to main file of module
 
     param3b = SailorMoon.dynamics_parameters()
     lps = SailorMoon.lagrange_points(param3b.mu2)
-
 
     # some inputs needed for the thrust profile
     tmax_si = 280e-3 * 4  # N
@@ -93,8 +91,6 @@ using Distributed
         r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
         return r - 12000 / param3b.lstar
     end
-    
-
         
     terminate_affect!() = true
     no_affect!() = false
@@ -108,8 +104,6 @@ using Distributed
         end
         return circle
     end
-
-
 
     ## set up of initial condition (Lyapunov orbit)
     lp = 2
@@ -127,18 +121,19 @@ using Distributed
 
     ## Grid search parameters: CHANGE HERE
     n = 120
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
-    ϕ_vec    = LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
+    θs_vec   = [180/180*pi] # LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
+    ϕ_vec    = [0.0]        # LinRange(0, 2*pi, n+1)[1:n] # [0.628318530717958]  [0.0]    #
     epsr_vec = 10.0 .^(-6)
     epsv_vec = 10.0 .^(-6)
     tof_bck  = 120 * 86400 / param3b.tstar
 
     # include callback functions 
     apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!)
-    periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
     perilune_cb  = ContinuousCallback(perilune_cond, no_affect!)
-    prixmity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
-    cbs = [apoapsis_cb, prixmity_earth_cb, perilune_cb];
+    periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
+    proxmity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
+    cbs = [apoapsis_cb, proxmity_earth_cb, perilune_cb]
+
 
     ## make initial conditions 
     grids = []
@@ -155,10 +150,10 @@ using Distributed
                     
                     xf = SailorMoon.set_terminal_state2(ϕ0, θmf, param3b, LPOArrival)
                     # in Sun-B1 frame
-                    xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, θsf, param3b.oms, param3b.as), 1.0)
+                    xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
                     
                     push!(grids, [ϕ0, ϵr, ϵv, θsf, xf_sb1])
-    #                 println(xf)
+                    println("xf_sb1: ", xf_sb1)
                     
                 end
             end
@@ -169,10 +164,11 @@ using Distributed
     svf_ = grids[1][5]
     tspan = [0, -tof_bck]
 
-    params = [param3b.mu2, param3b.mus, param3b.as, pi - grids[1][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.01, 0.01, SailorMoon.dv_sun_dir_angles2]
+    params = [param3b.mu2, param3b.mus, param3b.as, pi - grids[1][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.0, 0.0, SailorMoon.dv_sun_dir_angles2]
     prob_base = ODEProblem(SailorMoon.rhs_bcr4bp_sb1frame2_thrust!, svf_, tspan, params)
 
     ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+
 
     ## data extraction and make csv
     # make dataframe
@@ -190,7 +186,8 @@ using Distributed
         global lfb_count = 0
         global prob_base  = remake(prob_base, u0=grids[i][5], p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, mdot, tmax, dv_fun])
         global sol  = SailorMoon.integrate_rk4(prob_base, 0.001, cbs, false)
-        
+    
+
         # did SC hit proximity of the earth? 
         if sol.t[end] > prob_base.tspan[2]
             println("$i is terminated!")
@@ -318,13 +315,21 @@ using Distributed
                                x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
                                tof_tot,  m0, lfb_count])
                     global id += 1
+
+                    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], show=true)
+
                 end
             end
         end
     end
 
+    scatter!(ptraj, [param3b.as], [0.0])  # (roughly) earth
+    moon = plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
+    plot!(ptraj, moon[1,:], moon[2,:])
+    display(ptraj)
+
     # println(df)
-    CSV.write("grid_search1129.csv", df)
+    CSV.write("grid_search0312.csv", df)
         
     # moon = plot_circle(1-param3b.mu2, param3b.as , 0.0)
     # earth = plot_circle(param3b.mu2, param3b.as, 0.0)

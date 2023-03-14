@@ -3,7 +3,7 @@
 function make_ig_bounds(row, τ_ig, n_arc::Int64)
     sv_mid_cart = [row.x_ra, row.y_ra, row.z_ra, row.xdot_ra, row.ydot_ra, row.zdot_ra]
     # change the coordinates into cylindrical (only position)
-    svm_mid_cyl = vcat(SailorMoon.cart2cylind_only_pos(sv_mid_cart), row.m_ra)
+    svm_mid_cyl = vcat(cart2cylind_only_pos(sv_mid_cart), row.m_ra)
 
     tof_leo2mid = row.dt2
     tof_mid2lpo = row.dt1

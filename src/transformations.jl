@@ -5,24 +5,33 @@ Transformations
 
 """
     transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real)
+    Boudad PhD thesis P.39. Note that the barycenter B2 = Sun is assumed. 
 
 Transform state from Earth-Moon rotating frame (origin: E-M barycenter B1) 
 to Sun-B1 rotating frame (origin: S-B1 barycenter B2).
 Careful with sign of ωs!! (should be negative)
+
+# Arguments
+    - `state`: state (x,y,z,vx,vy,vz)
+    - `θm`   : Angle of E->M line w.r.t. Sun->B1 line 
+    - `ωm`   : angular velocity of E->M axis w.r.t. S->B1 line  
+    - `as`   : distance from 
 """
-function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real, as::Real)
-    ωm = -ωs
-    θm = π - θs
-    cos_θm = cos(θm)
-    sin_θm = sin(θm)
+
+function transform_EMrot_to_SunB1(state::Vector, θm::Real, ωm::Real, as::Real)
+
+    cos_θ = cos(θm)
+    sin_θ = sin(θm)
+    
     C = [
-        cos_θm      -sin_θm   0 0       0      0
-        sin_θm      cos_θm    0 0       0      0
-        0           0         1 0       0      0
-        -ωm*sin_θm -ωm*cos_θm 0 cos_θm -sin_θm 0 
-         ωm*cos_θm -ωm*sin_θm 0 sin_θm  cos_θm 0
-         0          0         0 0       0      1
+        cos_θ      -sin_θ   0 0       0      0
+        sin_θ      cos_θ    0 0       0      0
+        0           0       1 0       0      0
+        -ωm*sin_θ -ωm*cos_θ 0 cos_θ -sin_θ     0 
+         ωm*cos_θ -ωm*sin_θ 0 sin_θ  cos_θ     0
+         0          0        0 0      0     1
     ]
+
     state_conv = C * state
     state_conv = state_conv + [as, 0,0,0,0,0]
     
@@ -30,12 +39,28 @@ function transform_EMrot_to_SunB1(state::Vector, θs::Real, ωs::Real, as::Real)
 end
 
 
-"""
-Transform state from Earth-Moon rotating frame to Sun-B1 rotating frame.
-Careful with sign of ωm!! (should be positive)
-"""
-function transform_SunB1_to_EMrot(state, θm::Real, ωm::Real)
+function transform_SunB1_to_EMrot(state::Vector, θm::Real, ωm::Real, as::Real)
+
+    state_conv = state - [as, 0,0,0,0,0]
+
+    cos_θ = cos(θm)
+    sin_θ = sin(θm)
+    
+    C = inv([
+        cos_θ      -sin_θ   0 0       0      0
+        sin_θ      cos_θ    0 0       0      0
+        0           0       1 0       0      0
+        -ωm*sin_θ -ωm*cos_θ 0 cos_θ -sin_θ     0 
+         ωm*cos_θ -ωm*sin_θ 0 sin_θ  cos_θ     0
+         0          0        0 0      0     1
+    ])
+
+    state_conv = C * state_conv
+    
+    return state_conv
 end
+
+
 
 
 """
@@ -97,7 +122,6 @@ function transform_sb1_to_EearthIne(state_sb1::Vector, θm::Real, ωm::Real, μ2
     
     state_EarthIne = state_ + [μ2*cos(θm), μ2*sin(θm), 0, 0, 0, 0]
 
-    
     return state_EarthIne
 end
 
@@ -202,3 +226,33 @@ function cylind2cart_only_pos(state::Vector)
 
     return vcat([x, y], state[3:6])
 end
+
+
+function rot2ine(θ::Real, ω::Real)
+    cos_θ = cos(θ)
+    sin_θ = sin(θ)
+    rotmat = [
+            cos_θ -sin_θ 0.0 0.0 0.0 0.0
+            sin_θ cos_θ 0.0 0.0 0.0 0.0
+            0.0 0.0 1.0 0.0 0.0 0.0
+            -ω*sin_θ -ω*cos_θ 0.0 cos_θ -sin_θ 0.0
+             ω*cos_θ -ω*sin_θ 0.0 sin_θ  cos_θ 0.0
+            0.0 0.0 0.0 0.0 0.0 1.0
+        ]
+    return rotmat
+end
+
+function ine2rot(θ::Real, ω::Real)
+    cos_θ = cos(θ)
+    sin_θ = sin(θ)
+    rotmat = transpose([
+            cos_θ -sin_θ 0.0 0.0 0.0 0.0
+            sin_θ cos_θ 0.0 0.0 0.0 0.0
+            0.0 0.0 1.0 0.0 0.0 0.0
+            -ω*sin_θ -ω*cos_θ 0.0 cos_θ -sin_θ 0.0
+             ω*cos_θ -ω*sin_θ 0.0 sin_θ  cos_θ 0.0
+            0.0 0.0 0.0 0.0 0.0 1.0
+        ])
+    return rotmat
+end
+
