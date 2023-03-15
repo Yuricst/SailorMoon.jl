@@ -73,6 +73,34 @@ function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
     return x_LEO, x_mid, x_LPO, tofs, θs
 end
 
+"""
+    unpacking variables along with multishoot_trajectory2
+"""
+function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_lr  = x[1:9+6*n_arc]
+    x_mid = x[10+6*n_arc:18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc:22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_lr[8], x_lr[9], x_mid[8], x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        # println("θf: ", θf)
+    end
+    return x_lr, x_mid, x_LPO, tofs, θs
+end
+
+
 function get_LEO_state(x_LEO, θs, verbose::Bool=false)
     rp_input, ra_input, α = x_LEO[1:3]
     sv0_sunb1 = vcat(
@@ -203,5 +231,67 @@ function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_s
         return res
     else
         return res, sol_param_list, [sol_ballistic_fwd,sol_ballistic_bck], tofs
+    end
+end
+
+
+"""
+    Updated version of multishoot_trajectory.
+    arcs are: LEO <- x_lr -> <- apogee -> <- LPO
+"""
+function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_sols::Bool=false, verbose::Bool=false) where T
+    # unpack decision vector
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, n_arc)
+
+    # initialize storage
+    sol_param_list = []
+
+    sv_lr = x_lr[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    svm_lr = vcat(sv_lr, x_lr[7])
+
+    # propagate midpoint backward (-> LEO)
+    # FIXME: we probably want to add "coasting" for the final TBD sec. (1 day?)
+    svf_lr_bck = propagate_arc!(
+        svm_lr, θs[1], [0, -tofs[1]/n_arc], n_arc, dt, x_lr[10 : 9+3*n_arc], dir_func,
+        get_sols, sol_param_list, "xlr_bck_arc"
+    )
+
+    # propaagte midpoint forward
+    svf_lr_fwd = propagate_arc!(
+        svm_lr, θs[1], [0, tofs[2]/n_arc], n_arc, dt, x_lr[10+3n_arc : end], dir_func,
+        get_sols, sol_param_list, "xlr_fwd_arc"
+    )
+
+    # propagate midpoint backward
+    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0_cart, x_mid[7])
+
+    svf_mid_bck = propagate_arc!(
+        svm0, θs[2], [0, -tofs[3]/n_arc], n_arc, dt, x_mid[10 : 9+3*n_arc], dir_func,
+        get_sols, sol_param_list, "mid_bck_arc"
+    )
+
+    # propaagte midpoint forward
+    svf_mid_fwd = propagate_arc!(
+        svm0, θs[2], [0, tofs[4]/n_arc], n_arc, dt, x_mid[10+3n_arc : end], dir_func,
+        get_sols, sol_param_list, "mid_fwd_arc"
+    )
+
+    # propagate from LPO backward
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
+    svf_lpo = propagate_arc!(
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[5]/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        get_sols, sol_param_list, "lpo_arc"
+    )
+
+    # residuals
+    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd)[:]
+
+    # output
+    if get_sols == false
+        return res
+    else
+        return res, sol_param_list, [sol_ballistic_bck], tofs
     end
 end

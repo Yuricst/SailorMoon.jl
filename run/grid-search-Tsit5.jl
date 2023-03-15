@@ -1,17 +1,15 @@
 using Distributed
-@everywhere begin
-    using DifferentialEquations
-    using Plots
-    using LinearAlgebra
-    import ForwardDiff
-    import DiffResults
-    using AstrodynamicsBase
-    # import joptimise
-    using Printf
-    using DataFrames
-    using JSON
-    using CSV
-end
+include("../src/SailorMoon.jl")
+using DifferentialEquations
+using Plots
+using LinearAlgebra
+import ForwardDiff
+import DiffResults
+using AstrodynamicsBase
+using Printf
+using DataFrames
+using JSON
+using CSV
 
 # addprocs(10)
 @show procs()
@@ -19,7 +17,6 @@ end
 @everywhere  begin
 
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
-    include("../src/SailorMoon.jl")   # relative path to main file of module
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -44,6 +41,8 @@ end
         mdot_si, mstar, param3b.tstar
     )
     dv_fun = SailorMoon.dv_no_thrust
+    mdot = 0.0
+    tmax = 0.0
 
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
@@ -335,23 +334,17 @@ for (i,sol) in enumerate(sim)
                     end    
                 end
 
-                id_lunar_rad = findall(abs.(r_vec .- param3b.mu1) .< 0.1)
+                id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
+                id_lunar_rad = id_lunar_rad[2]
                 println("id_lunar_rad: ", id_lunar_rad)
-                if ~isempty(id_lunar_rad)
-                    for k in id_lunar_rad
-                        if ~isnan(perilune_cond(sol.u[k], sol.t[k], 0.0))
-                            x_l    = sol.u[k][1]
-                            y_l    = sol.u[k][2]
-                            z_l    = sol.u[k][3]
-                            xdot_l = sol.u[k][4]
-                            ydot_l = sol.u[k][5]
-                            zdot_l = sol.u[k][6]
-                            m_l    = sol.u[k][7]  
-                            t_lrad = sol.t[k]
-                        end
-                    end    
-                end
-                
+                x_l    = sol.u[id_lunar_rad][1]
+                y_l    = sol.u[id_lunar_rad][2]
+                z_l    = sol.u[id_lunar_rad][3]
+                xdot_l = sol.u[id_lunar_rad][4]
+                ydot_l = sol.u[id_lunar_rad][5]
+                zdot_l = sol.u[id_lunar_rad][6]
+                m_l    = sol.u[id_lunar_rad][7]  
+                t_lrad = -sol.t[id_lunar_rad]
 
                 # obtain α
                 θs0 = θsf - param3b.oms * tof_tot
@@ -418,7 +411,7 @@ plot!(ptraj, circle[1,:], circle[2,:])
 display(ptraj)
 
 # print(df)
-# CSV.write("grid_search.csv", df)
+CSV.write("grid_search.csv", df)
 
 
 

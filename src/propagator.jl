@@ -1,5 +1,6 @@
 """
 dynamics propagation (Sims-Flanagan Transcription)
+Currently not used (03/14/2023)
 """
 
 using DifferentialEquations
