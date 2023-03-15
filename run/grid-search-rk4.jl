@@ -30,6 +30,8 @@ using Distributed
     mdot = AstrodynamicsBase.dimensional2canonical_mdot(
         mdot_si, mstar, param3b.tstar
     )
+    mdot = 0.0
+    tmax = 0.0
 
     dv_fun = SailorMoon.dv_no_thrust
 
@@ -172,7 +174,7 @@ using Distributed
 
     ## data extraction and make csv
     # make dataframe
-    entries = ["id", "phi0", "epsr", "epsv", "thetaf",
+    entries = ["id", "phi0", "epsr", "epsv", "thetasf",
               "rp_kep", "ra_kep", "alpha",  # important guys
               "ra", "dt1", "dt2",
               "x_ini", "y_ini", "z_ini", "xdot_ini", "ydot_ini", "zdot_ini", "m_ini",
@@ -323,30 +325,14 @@ using Distributed
         end
     end
 
-    scatter!(ptraj, [param3b.as], [0.0])  # (roughly) earth
-    moon = plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
-    plot!(ptraj, moon[1,:], moon[2,:])
-    display(ptraj)
+    # scatter!(ptraj, [param3b.as], [0.0])  # (roughly) earth
+    # moon = plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
+    # plot!(ptraj, moon[1,:], moon[2,:])
+    # display(ptraj)
 
     # println(df)
-    CSV.write("grid_search0312.csv", df)
+    CSV.write("grid_search_rk4_0314.csv", df)
         
-    # moon = plot_circle(1-param3b.mu2, param3b.as , 0.0)
-    # earth = plot_circle(param3b.mu2, param3b.as, 0.0)
-    # LEO_ub = plot_circle(3*param3b.mu2, param3b.as, 0.0)
-    # moon_soi_ub = plot_circle(1-param3b.mu2+66000/param3b.lstar, param3b.as, 0.0)
-    # moon_soi_lb = plot_circle(1-param3b.mu2-66000/param3b.lstar, param3b.as, 0.0)
-
-
-    # plot!(ptraj, hcat(sol_bck.u...)[1,:], hcat(sol_bck.u...)[2,:], color=:deeppink, label="RK4")
-    # plot!(ptraj, Array(sol)[1,:], Array(sol)[2,:], color=:blue, linewidth=1.0, label="sol", linestyle=:solid)
-
-    # plot!(ptraj, earth[1,:], earth[2,:], c=:green, lw=1.0, label="earth")
-    # plot!(ptraj, moon[1,:], moon[2,:], c=:orange, lw=1.0, label="moon")
-    # plot!(ptraj, moon_soi_ub[1,:], moon_soi_ub[2,:], c=:grey, lw=1.0, label="moon_soi_ub")
-    # plot!(ptraj, moon_soi_lb[1,:], moon_soi_lb[2,:], c=:grey, lw=1.0, label="moon_soi_lb")
-
-    # display(ptraj)
 
 end
 

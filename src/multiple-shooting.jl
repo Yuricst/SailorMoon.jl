@@ -39,6 +39,7 @@ mdot = AstrodynamicsBase.dimensional2canonical_mdot(
     mdot_si, mstar, param3b.tstar
 )
 
+
 LPOArrival = load_lpo(lpo_filename, 2)
 
 # dummy params for initialization
@@ -98,6 +99,31 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
         # println("θf: ", θf)
     end
     return x_lr, x_mid, x_LPO, tofs, θs
+end
+
+function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_LEO = x[1 : 5+3*n_arc]
+    x_lr  = x[6+3*n_arc : 13+6*n_arc]
+    x_mid = x[14+6*n_arc : 22+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[23+12*n_arc : 26+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_LEO[5], x_lr[8], x_mid[8], x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        # println("θf: ", θf)
+    end
+    return x_LEO, x_lr, x_mid, x_LPO, tofs, θs
 end
 
 
@@ -196,7 +222,7 @@ function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_s
     # propagate from LEO forward
     sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, verbose)
     svf_LEO = propagate_arc!(
-        sv0_LEO, θ0_leo, [0, tofs[1]/n_arc], n_arc, dt, x_LEO[5 : end], dir_func,
+        sv0_LEO, θ0_leo, [0, (tofs[1] - ballistic_time)/n_arc], n_arc, dt, x_LEO[5 : end], dir_func,
         get_sols, sol_param_list, "leo_arc"
     )
 
@@ -219,7 +245,7 @@ function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_s
     # propagate from LPO backward
     sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[4]/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        sol_ballistic_bck.u[end], θ0_lpo, [0, (-tofs[4] + ballistic_time_back)/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
         get_sols, sol_param_list, "lpo_arc"
     )
 
@@ -287,6 +313,66 @@ function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_
 
     # residuals
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd)[:]
+
+    # output
+    if get_sols == false
+        return res
+    else
+        return res, sol_param_list, [sol_ballistic_bck], tofs
+    end
+end
+
+
+"""
+    arcs are: LEO -> x_lr -> <- apogee -> <- LPO
+"""
+function multishoot_trajectory3(x::AbstractVector{T}, dir_func, n_arc::Int, get_sols::Bool=false, verbose::Bool=false) where T
+    # unpack decision vector
+    x_LEO, x_lr, x_mid, x_LPO, tofs, θs = unpack_x3(x, n_arc)
+    # initialize storage
+    sol_param_list = []
+
+    # propagate from LEO forward
+    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, verbose)
+    svf_LEO = propagate_arc!(
+        sv0_LEO, θ0_leo, [0, tofs[1]/n_arc], n_arc, dt, x_LEO[6 : end], dir_func,
+        get_sols, sol_param_list, "leo_arc"
+    )
+
+    sv_lr = x_lr[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    svm_lr = vcat(sv_lr, x_lr[7])
+
+    # propaagte midpox_lrint forward
+    svf_lr_fwd = propagate_arc!(
+        svm_lr, θs[1], [0, tofs[2]/n_arc], n_arc, dt, x_lr[9 : end], dir_func,
+        get_sols, sol_param_list, "xlr_fwd_arc"
+    )
+
+    # propagate midpoint backward
+    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0_cart, x_mid[7])
+
+    svf_mid_bck = propagate_arc!(
+        svm0, θs[2], [0, -tofs[3]/n_arc], n_arc, dt, x_mid[10 : 9+3*n_arc], dir_func,
+        get_sols, sol_param_list, "mid_bck_arc"
+    )
+
+    # propaagte midpoint forward
+    svf_mid_fwd = propagate_arc!(
+        svm0, θs[2], [0, tofs[4]/n_arc], n_arc, dt, x_mid[10+3n_arc : end], dir_func,
+        get_sols, sol_param_list, "mid_fwd_arc"
+    )
+
+    # propagate from LPO backward
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
+    svf_lpo = propagate_arc!(
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[5]/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        get_sols, sol_param_list, "lpo_arc"
+    )
+
+    # residuals
+    res = vcat(svf_LEO - svm_lr, svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd)[:]
 
     # output
     if get_sols == false
