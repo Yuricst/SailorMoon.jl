@@ -307,12 +307,24 @@ function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_
     # propagate from LPO backward
     sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[5]/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5]-ballistic_time_back)/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
         get_sols, sol_param_list, "lpo_arc"
     )
 
+    # periapsis 
+    alt = (6375 + 500) / param3b.lstar
+    θs0 = θs[end] - param3b.oms * sum(tofs)
+    θe0 = 2*pi - θs0    # earth angle at LEO
+    sc_earth = [
+        svf_lr_bck[1] - (param3b.as + param3b.mu2*cos(θe0)),
+        svf_lr_bck[2] - param3b.mu2*sin(θe0),
+        svf_lr_bck[3]
+    ]
+    peri_cond = norm(sc_earth) - alt
+    # println("alt: ", peri_cond)
+
     # residuals
-    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd)[:]
+    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond)[:]
 
     # output
     if get_sols == false

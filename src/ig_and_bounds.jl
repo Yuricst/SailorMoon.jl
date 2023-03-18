@@ -104,7 +104,6 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
 
     rE = 6375 # km
 
-
     # x_lr = [x,y,z,vx,vy,vz, m, tof_back, tof_fwd, controls...] (9 + 6*n_arc)
     ig_x_lr = vcat(
         x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, 1.0,

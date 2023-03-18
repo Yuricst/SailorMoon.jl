@@ -28,7 +28,7 @@ ip_options = Dict(
 )
 
 # arc design (1 or 2 or 3)
-arc_design = 3
+arc_design = 2
 ##################################################
 
 if dir_func == SailorMoon.dv_no_thrust
@@ -53,6 +53,9 @@ elseif arc_design == 3
     x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, n_arc)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(n_arc, dir_func, x0)
 end
+
+# println("initial tof: ", [x0[8], x0[9],  x0[17+6n_arc], x0[18+6n_arc], x0[22+12n_arc]])
+
 # checking if the initial guess is good enough
 res = eval_sft(x0)
 # println("ub - x0: ", ux - x0)
@@ -66,14 +69,20 @@ vec = vcat(ux - x0, x0 - lx)
 #     error("Error: (At least one element of) initial guess is infinging the defined ub/lb.") 
 # end
 
+# make initial guess
 xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
     options=ip_options, outputfile=true, 
 )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 println(Info)
+println("Now, using the initial guess, we reoptimize...")
 
-# println(xopt)
-# res = SailorMoon.multishoot_trajectory(ig_x, dir_func, n_arc, false, false) 
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(n_arc, dir_func, xopt)
 
-# println("res: ", res)
+# make initial guess
+xopt2, fopt2, Info2 = joptimise.minimize(fitness!, xopt, ng;
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+    options=ip_options, outputfile=true, 
+) 
+
