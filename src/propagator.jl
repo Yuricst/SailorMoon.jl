@@ -3,9 +3,6 @@ dynamics propagation (Sims-Flanagan Transcription)
 Currently not used (03/14/2023)
 """
 
-using DifferentialEquations
-using Plots
-
 abstract type AbstractPropagatorType end
 
 Base.@kwdef struct ODEPropagator <: AbstractPropagatorType

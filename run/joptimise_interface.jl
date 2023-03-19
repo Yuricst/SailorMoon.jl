@@ -9,7 +9,7 @@ using joptimise
 
 include("../src/SailorMoon.jl")
 
-### PARAMETERS ###################################
+### INPUTS ###################################
 # csv file to load the initial solution
 filename = "grid_search_Tsit5_0314.csv"
 # dv_dir function corresponding to the csv file 
@@ -18,7 +18,8 @@ dir_func = SailorMoon.dv_no_thrust
 # 3body parameter
 param3b = SailorMoon.dynamics_parameters()
 
-n_arc = 5
+# multiple shooting parameter
+paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
 # run minimizer with IPOPT
 ip_options = Dict(
@@ -29,7 +30,8 @@ ip_options = Dict(
 
 # arc design (1 or 2 or 3)
 arc_design = 2
-##################################################
+
+### PARAMETERS #################################
 
 if dir_func == SailorMoon.dv_no_thrust
     τ_ig = 0.0
@@ -44,14 +46,14 @@ df = DataFrame(CSV.File(filename))
 row = df[1,:]
 
 if arc_design == 1
-    x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(n_arc, dir_func, x0)
+    x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
+    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
 elseif arc_design == 2
-    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(n_arc, dir_func, x0)
+    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 elseif arc_design == 3
-    x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(n_arc, dir_func, x0)
+    x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
+    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(dir_func, paramMulti, x0)
 end
 
 # println("initial tof: ", [x0[8], x0[9],  x0[17+6n_arc], x0[18+6n_arc], x0[22+12n_arc]])
@@ -78,7 +80,7 @@ xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
 println(Info)
 println("Now, using the initial guess, we reoptimize...")
 
-fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(n_arc, dir_func, xopt)
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(dir_func, paramMulti, x0)
 
 # make initial guess
 xopt2, fopt2, Info2 = joptimise.minimize(fitness!, xopt, ng;

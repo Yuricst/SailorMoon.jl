@@ -1,45 +1,42 @@
-using DifferentialEquations
-using Plots
-using LinearAlgebra
-import ForwardDiff
-import DiffResults
-using AstrodynamicsBase
-# import joptimise
-using Printf
-using JSON
+"""
+ set up the basic parameters for the multiple shooting
+"""
 
-#include("../../julia-r3bp/R3BP/src/R3BP.jl")
+abstract type AbstractParameterType end
+
+Base.@kwdef struct multishoot_params <: AbstractParameterType
+    dt::Real
+    ballistic_time::Real
+    ballistic_time_back::Real
+    tmax::Real
+    mdot::Real
+    n_arc::Int
+end
 
 
-##############################################################
-# set up the basic parameters
-param3b = dynamics_parameters()
-tmax_si = 280e-3 * 4   # N
-isp_si = 1800   # sec
-mdot_si = tmax_si / (isp_si * 9.81)
-mstar = 2500  # kg
+function multi_shoot_parameters(param3b::dynamics_params)
+    tmax_si = 280e-3 * 4   # N
+    isp_si  = 1800   # sec
+    mdot_si = tmax_si / (isp_si * 9.81)
+    mstar = 2500  # kg
+    dt    = 0.005
+    n_arc = 5
 
-ballistic_time      = 1 * 86400 / param3b.tstar
-ballistic_time_back = 1 * 86400 / param3b.tstar
-dt = 0.005
+    ballistic_time      = 1 * 86400 / param3b.tstar
+    ballistic_time_back = 1 * 86400 / param3b.tstar
 
-# set up LPO
-println(pwd())
-println(dirname(@__FILE__))
-#lpo_filename = "../data/lpo_L2_1200km_S.bson"
+    tmax = AstrodynamicsBase.dimensional2canonical_thrust(
+        tmax_si, mstar, param3b.lstar, param3b.tstar
+        )
+    mdot = AstrodynamicsBase.dimensional2canonical_mdot(
+            mdot_si, mstar, param3b.tstar
+        )
+
+    return multishoot_params(dt, ballistic_time, ballistic_time_back, tmax, mdot, n_arc)
+
+end
+
 lpo_filename = joinpath(dirname(@__FILE__), "data/lpo_L2_1200km_S.bson")
-
-############################################################
-
-
-tmax = AstrodynamicsBase.dimensional2canonical_thrust(
-    tmax_si, mstar, param3b.lstar, param3b.tstar
-)
-mdot = AstrodynamicsBase.dimensional2canonical_mdot(
-    mdot_si, mstar, param3b.tstar
-)
-
-
 LPOArrival = load_lpo(lpo_filename, 2)
 
 # dummy params for initialization
@@ -127,7 +124,7 @@ function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
 end
 
 
-function get_LEO_state(x_LEO, θs, verbose::Bool=false)
+function get_LEO_state(x_LEO, θs, param_multi::multishoot_params, verbose::Bool=false)
     rp_input, ra_input, α = x_LEO[1:3]
     sv0_sunb1 = vcat(
         paramIni_to_sb1(rp_input, α, ra_input, pi-θs[1], param3b.oml, param3b.mu2, param3b.as),
@@ -144,11 +141,13 @@ function get_LEO_state(x_LEO, θs, verbose::Bool=false)
 
     # ballistic propagation with small time-steps
     params = [
-        param3b.mu2, param3b.mus, param3b.as, pi-θs[1], param3b.oml, param3b.omb, 0.0, 0.0, 0.0, mdot, tmax,
+        param3b.mu2, param3b.mus, param3b.as, pi-θs[1], 
+        param3b.oml, param3b.omb, 0.0, 0.0, 0.0, 
+        param_multi.mdot, param_multi.tmax,
         dv_no_thrust
     ]
 
-    _prob = remake(_prob_base; tspan=[0,ballistic_time], u0 = sv0_sunb1, p = params)
+    _prob = remake(_prob_base; tspan=[0, param_multi.ballistic_time], u0 = sv0_sunb1, p = params)
     sol_ballistic_fwd = integrate_rk4(_prob, 0.001);
     θ_iter = θs[1] + param3b.oms*sol_ballistic_fwd.t[end]
 
@@ -156,7 +155,7 @@ function get_LEO_state(x_LEO, θs, verbose::Bool=false)
     return sol_ballistic_fwd.u[end], θ_iter, sol_ballistic_fwd
 end
 
-function get_LPO_state(x_LPO, θs, verbose::Bool=false)
+function get_LPO_state(x_LPO, θs, param_multi::multishoot_params, verbose::Bool=false)
     xf = set_terminal_state2(x_LPO[2], θs[3], param3b, LPOArrival)
 
     # transform to Sun-B1 frame
@@ -167,16 +166,18 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
 
     # ballistic propagation with small time-steps
     params = [
-        param3b.mu2, param3b.mus, param3b.as, pi - θs[3], param3b.oml, param3b.omb, 0.0, 0.0, 0.0, mdot, tmax,
+        param3b.mu2, param3b.mus, param3b.as, pi - θs[3], 
+        param3b.oml, param3b.omb, 0.0, 0.0, 0.0, 
+        param_multi.mdot, param_multi.tmax,
         dv_no_thrust
     ]
     # println("params: ", params)
     _prob = remake(
-        _prob_base; tspan=[0,-ballistic_time_back],
+        _prob_base; tspan=[0,-param_multi.ballistic_time_back],
         u0 = svf_sunb1, p = params
     )
     sol_ballistic_bck = integrate_rk4(_prob, 0.001);
-    θ_iter = θs[3] - param3b.oms*ballistic_time_back
+    θ_iter = θs[3] - param3b.oms * param_multi.ballistic_time_back
 
     if verbose
         println("svf_sunb1: \n", svf_sunb1)
@@ -184,18 +185,20 @@ function get_LPO_state(x_LPO, θs, verbose::Bool=false)
     return sol_ballistic_bck.u[end], θ_iter, sol_ballistic_bck
 end
 
-function propagate_arc!(sv0, θ0, tspan, n_arc, dt, x_control, dir_func, get_sols::Bool, sol_param_list, name::String)
+function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multishoot_params, get_sols::Bool, sol_param_list, name::String)
     sv_iter = [el for el in sv0]
     θ_iter = θ0
-    for i = 1:n_arc
+    for i = 1:param_multi.n_arc
         τ, γ, β = x_control[1+3*(i-1) : 3*i]
 
         params = [
-            param3b.mu2, param3b.mus, param3b.as, pi - θ_iter, param3b.oml, param3b.omb, τ, γ, β, mdot, tmax,
+            param3b.mu2, param3b.mus, param3b.as, pi - θ_iter, 
+            param3b.oml, param3b.omb, τ, γ, β, 
+            param_multi.mdot, param_multi.tmax,
             dir_func
         ]
         # _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
-        # sol = integrate_rk4(_prob, dt);
+        # sol = integrate_rk4(_prob, param_multi.dt);
 
         # Tsit5()
         _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
@@ -212,17 +215,24 @@ function propagate_arc!(sv0, θ0, tspan, n_arc, dt, x_control, dir_func, get_sol
     return sv_iter
 end
 
-function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_sols::Bool=false, verbose::Bool=false) where T
+function multishoot_trajectory(
+    x::AbstractVector{T},
+    dir_func, 
+    param_multi::multishoot_params,
+    get_sols::Bool=false, 
+    verbose::Bool=false
+    ) where T
+    
     # unpack decision vector
-    x_LEO, x_mid, x_LPO, tofs, θs = unpack_x(x, n_arc)
+    x_LEO, x_mid, x_LPO, tofs, θs = unpack_x(x, param_multi.n_arc)
 
     # initialize storage
     sol_param_list = []
 
     # propagate from LEO forward
-    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, verbose)
+    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, ballistic_time, verbose)
     svf_LEO = propagate_arc!(
-        sv0_LEO, θ0_leo, [0, (tofs[1] - ballistic_time)/n_arc], n_arc, dt, x_LEO[5 : end], dir_func,
+        sv0_LEO, θ0_leo, [0, (tofs[1] - param_multi.ballistic_time)/param_multi.n_arc], x_LEO[5 : end], dir_func, param_multi,
         get_sols, sol_param_list, "leo_arc"
     )
 
@@ -232,20 +242,21 @@ function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_s
     svm0 = vcat(sv0_cart, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
-        svm0, θs[2], [0, -tofs[2]/n_arc], n_arc, dt, x_mid[10 : end], dir_func,
+        svm0, θs[2], [0, -tofs[2]/param_multi.n_arc], x_mid[10 : end], dir_func, param_multi,
         get_sols, sol_param_list, "mid_bck_arc"
     )
 
     # propaagte midpoint forward
     svf_mid_fwd = propagate_arc!(
-        svm0, θs[2], [0, tofs[3]/n_arc], n_arc, dt, x_mid[10+3n_arc : end], dir_func,
+        svm0, θs[2], [0, tofs[3]/param_multi.n_arc], x_mid[10+3n_arc : end], dir_func, param_multi,
         get_sols, sol_param_list, "mid_fwd_arc"
     )
 
     # propagate from LPO backward
-    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, (-tofs[4] + ballistic_time_back)/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        sol_ballistic_bck.u[end], θ0_lpo, [0, (-tofs[4] + param_multi.ballistic_time_back)/param_multi.n_arc], 
+        x_LPO[5 : end], dir_func, param_multi,
         get_sols, sol_param_list, "lpo_arc"
     )
 
@@ -256,7 +267,7 @@ function multishoot_trajectory(x::AbstractVector{T}, dir_func, n_arc::Int, get_s
     if get_sols == false
         return res
     else
-        return res, sol_param_list, [sol_ballistic_fwd,sol_ballistic_bck], tofs
+        return res, sol_param_list, [sol_ballistic_fwd, sol_ballistic_bck], tofs
     end
 end
 
@@ -265,9 +276,16 @@ end
     Updated version of multishoot_trajectory.
     arcs are: LEO <- x_lr -> <- apogee -> <- LPO
 """
-function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_sols::Bool=false, verbose::Bool=false) where T
+function multishoot_trajectory2(
+    x::AbstractVector{T},
+    dir_func, 
+    param_multi::multishoot_params,
+    get_sols::Bool=false, 
+    verbose::Bool=false
+    ) where T
+
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
 
     # initialize storage
     sol_param_list = []
@@ -278,13 +296,13 @@ function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_
     # propagate midpoint backward (-> LEO)
     # FIXME: we probably want to add "coasting" for the final TBD sec. (1 day?)
     svf_lr_bck = propagate_arc!(
-        svm_lr, θs[1], [0, -tofs[1]/n_arc], n_arc, dt, x_lr[10 : 9+3*n_arc], dir_func,
+        svm_lr, θs[1], [0, -tofs[1]/param_multi.n_arc], x_lr[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
         get_sols, sol_param_list, "xlr_bck_arc"
     )
 
     # propaagte midpoint forward
     svf_lr_fwd = propagate_arc!(
-        svm_lr, θs[1], [0, tofs[2]/n_arc], n_arc, dt, x_lr[10+3n_arc : end], dir_func,
+        svm_lr, θs[1], [0, tofs[2]/param_multi.n_arc], x_lr[10+3*param_multi.n_arc : end], dir_func, param_multi,
         get_sols, sol_param_list, "xlr_fwd_arc"
     )
 
@@ -294,20 +312,21 @@ function multishoot_trajectory2(x::AbstractVector{T}, dir_func, n_arc::Int, get_
     svm0 = vcat(sv0_cart, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
-        svm0, θs[2], [0, -tofs[3]/n_arc], n_arc, dt, x_mid[10 : 9+3*n_arc], dir_func,
+        svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
         get_sols, sol_param_list, "mid_bck_arc"
     )
 
     # propaagte midpoint forward
     svf_mid_fwd = propagate_arc!(
-        svm0, θs[2], [0, tofs[4]/n_arc], n_arc, dt, x_mid[10+3n_arc : end], dir_func,
+        svm0, θs[2], [0, tofs[4]/param_multi.n_arc], x_mid[10+3*param_multi.n_arc : end], dir_func, param_multi,
         get_sols, sol_param_list, "mid_fwd_arc"
     )
 
     # propagate from LPO backward
-    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5]-ballistic_time_back)/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
+        dir_func, param_multi,
         get_sols, sol_param_list, "lpo_arc"
     )
 
@@ -338,16 +357,23 @@ end
 """
     arcs are: LEO -> x_lr -> <- apogee -> <- LPO
 """
-function multishoot_trajectory3(x::AbstractVector{T}, dir_func, n_arc::Int, get_sols::Bool=false, verbose::Bool=false) where T
+function multishoot_trajectory3(
+    x::AbstractVector{T},
+    dir_func, 
+    param_multi::multishoot_params,
+    get_sols::Bool=false, 
+    verbose::Bool=false
+    ) where T
+
     # unpack decision vector
-    x_LEO, x_lr, x_mid, x_LPO, tofs, θs = unpack_x3(x, n_arc)
+    x_LEO, x_lr, x_mid, x_LPO, tofs, θs = unpack_x3(x, param_multi.n_arc)
     # initialize storage
     sol_param_list = []
 
     # propagate from LEO forward
-    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, verbose)
+    sv0_LEO, θ0_leo, sol_ballistic_fwd = get_LEO_state(x_LEO, θs, param_multi, verbose)
     svf_LEO = propagate_arc!(
-        sv0_LEO, θ0_leo, [0, tofs[1]/n_arc], n_arc, dt, x_LEO[6 : end], dir_func,
+        sv0_LEO, θ0_leo, [0, (tofs[1] - param_multi.ballistic_time)/param_multi.n_arc], x_LEO[6 : end], dir_func, param_multi,
         get_sols, sol_param_list, "leo_arc"
     )
 
@@ -356,7 +382,7 @@ function multishoot_trajectory3(x::AbstractVector{T}, dir_func, n_arc::Int, get_
 
     # propaagte midpox_lrint forward
     svf_lr_fwd = propagate_arc!(
-        svm_lr, θs[1], [0, tofs[2]/n_arc], n_arc, dt, x_lr[9 : end], dir_func,
+        svm_lr, θs[1], [0, tofs[2]/param_multi.n_arc], x_lr[9 : end], dir_func, param_multi,
         get_sols, sol_param_list, "xlr_fwd_arc"
     )
 
@@ -366,20 +392,20 @@ function multishoot_trajectory3(x::AbstractVector{T}, dir_func, n_arc::Int, get_
     svm0 = vcat(sv0_cart, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
-        svm0, θs[2], [0, -tofs[3]/n_arc], n_arc, dt, x_mid[10 : 9+3*n_arc], dir_func,
+        svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi,
         get_sols, sol_param_list, "mid_bck_arc"
     )
 
     # propaagte midpoint forward
     svf_mid_fwd = propagate_arc!(
-        svm0, θs[2], [0, tofs[4]/n_arc], n_arc, dt, x_mid[10+3n_arc : end], dir_func,
+        svm0, θs[2], [0, tofs[4]/param_multi.n_arc], x_mid[10+3*param_multi.n_arc : end], dir_func, param_multi,
         get_sols, sol_param_list, "mid_fwd_arc"
     )
 
     # propagate from LPO backward
-    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, verbose)
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -tofs[5]/n_arc], n_arc, dt, x_LPO[5 : end], dir_func,
+        sol_ballistic_bck.u[end], θ0_lpo, [0, (-tofs[4] + param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], dir_func, param_multi,
         get_sols, sol_param_list, "lpo_arc"
     )
 

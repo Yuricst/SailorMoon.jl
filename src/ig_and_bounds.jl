@@ -1,3 +1,8 @@
+"""
+    Setting up the initial guess and ub/lb of the variables
+"""
+
+
 function make_ig_bounds(row, τ_ig, n_arc::Int64)
     sv_mid_cart = [row.x_ra, row.y_ra, row.z_ra, row.xdot_ra, row.ydot_ra, row.zdot_ra]
     # change the coordinates into cylindrical (only position)

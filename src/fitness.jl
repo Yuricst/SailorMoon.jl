@@ -2,12 +2,12 @@
 Generate fitness function
 
 # Arguments
-    - `n` : number of sf transcription (discretization per arc)
     - `dir_func`: reference direction of thrust 
+    - `param_multi`: parameters for multiple shooting 
 """
 function get_fitness(
-    n::Int,
-    dir_func,
+    dir_func, 
+    param_multi::multishoot_params,
     x
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
@@ -16,7 +16,7 @@ function get_fitness(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory(x, dir_func, n, false, false) 
+        res = multishoot_trajectory(x, dir_func, param_multi, false, false) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -25,7 +25,7 @@ function get_fitness(
         return residuals
     end
 
-    nx = 18 + 12*n  # number of decision variables 
+    nx = 18 + 12*param_multi.n_arc  # number of decision variables 
     storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
@@ -61,8 +61,8 @@ end
 
 
 function get_fitness2(
-    n::Int,
     dir_func,
+    param_multi::multishoot_params,
     x
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
@@ -71,7 +71,7 @@ function get_fitness2(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory2(x, dir_func, n, false, false) 
+        res = multishoot_trajectory2(x, dir_func, param_multi, false, false) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -80,7 +80,7 @@ function get_fitness2(
         return residuals
     end
 
-    nx = 22 + 15*n  # number of decision variables 
+    nx = 22 + 15*param_multi.n_arc  # number of decision variables 
     storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
@@ -101,7 +101,7 @@ function get_fitness2(
     # create objective function
     fitness! = function (g, x::AbstractVector{T}) where T
         # evaluate objective & objective gradient (trivial)
-        f = 1  #x[8] + x[9] + x[17+6n] + x[18+6n] + x[22+12n]    # tof
+        f = 1  
         g[:] = eval_sft(x)       # constraints (that need to be zero)
         # println("g(res): ", round.(g[:], digits=3))
         return f
@@ -116,8 +116,8 @@ end
 
 
 function get_fitness3(
-    n::Int,
     dir_func,
+    param_multi::multishoot_params,
     x
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
@@ -126,7 +126,7 @@ function get_fitness3(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory3(x, dir_func, n, false, false) 
+        res = multishoot_trajectory3(x, dir_func, param_multi, false, false) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -135,7 +135,7 @@ function get_fitness3(
         return residuals
     end
 
-    nx = 26 + 15*n  # number of decision variables 
+    nx = 26 + 15*param_multi.n_arc   # number of decision variables 
     storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
@@ -171,8 +171,8 @@ end
 
 
 function get_fitness2_minToF(
-    n::Int,
     dir_func,
+    param_multi::multishoot_params,
     x
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
@@ -181,7 +181,7 @@ function get_fitness2_minToF(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory2(x, dir_func, n, false, false) 
+        res = multishoot_trajectory2(x, dir_func, param_multi, false, false) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -190,7 +190,7 @@ function get_fitness2_minToF(
         return residuals
     end
 
-    nx = 22 + 15*n  # number of decision variables 
+    nx = 22 + 15*param_multi.n_arc  # number of decision variables 
     storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
     df_onehot = zeros(nx)
     df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
@@ -211,7 +211,7 @@ function get_fitness2_minToF(
     # create objective function
     fitness! = function (g, x::AbstractVector{T}) where T
         # evaluate objective & objective gradient (trivial)
-        f = x[8] + x[9] + x[17+6n] + x[18+6n] + x[22+12n]    # tof
+        f = x[8] + x[9] + x[17+6*param_multi.n_arc] + x[18+6*param_multi.n_arc] + x[22+12*param_multi.n_arc]    # tof
         g[:] = eval_sft(x)       # constraints (that need to be zero)
         # println("g(res): ", round.(g[:], digits=3))
         return f
