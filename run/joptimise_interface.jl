@@ -11,7 +11,7 @@ include("../src/SailorMoon.jl")
 
 ### INPUTS ###################################
 # csv file to load the initial solution
-filename = "grid_search_rk4_0314.csv"
+filename = "grid_search_rk4_0321.csv"
 # dv_dir function corresponding to the csv file 
 dir_func = SailorMoon.dv_no_thrust 
 
