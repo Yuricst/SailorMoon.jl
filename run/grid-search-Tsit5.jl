@@ -152,8 +152,8 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 10
-    m = 10
+    n = 30
+    m = 30
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-6)
@@ -223,15 +223,16 @@ end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
-# sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
-#             callback=cbs, reltol=1e-12, abstol=1e-12,
-#             save_everystep=true);
-
-sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
-            callback=cbs,
+sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
+            callback=cbs, reltol=1e-12, abstol=1e-12,
             save_everystep=true);
 
-ptraj = plot(size=(700,500), xlims=(385,395), ylims=(-8,8), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+# sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
+#             callback=cbs,
+#             save_everystep=true);
+
+ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+# plot!(ptraj, xlims=(385,395), ylims=(-8,8))
 cmap = :viridis
 
 
@@ -253,27 +254,27 @@ df = DataFrame([ name =>[] for name in entries])
 id = 1
 color_start = "orange"
 color_end = "blue"
-color_gradation = cgrad([color_start, color_end], n*m)
+color_gradation = cgrad([color_start, color_end], tof_bck)
 # extract the ensemble simulation
 for (i,sol) in enumerate(sim)
     global lfb_count = 0
+    # println(sol.t[end] > -tof_bck)
     
-    if sol.retcode == "Terminated"
-        println("sol: ", sol.retcode)
+    if sol.t[end] > -tof_bck
+        # println("sol: ", sol.retcode)
 
-        color = color_gradation[i]
-        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="")
+        color = color_gradation[round(-sol.t[end])]
+        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
 
 
         # Using Keplar 2 body problem, find the rp analytically
         θsf = grids[i][4]
         r_entry = sol.u[end][1:6]
-        println("r_entry")
         θmf = pi - θsf
         θm0 = θmf + param3b.oml * sol.t[end]
 
         r_entry_EIne = SailorMoon.transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
-        h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6], label="")
+        h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
 
         # println(θm0)
         # println(sol.u[end])
@@ -281,23 +282,24 @@ for (i,sol) in enumerate(sim)
 
         # we want SC to leave from Earth in CCW direction 
         if h_entry[3] > 0.0
-            println(r_entry[1:3], r_entry[4:6])
-            println(r_entry_EIne[1:3], r_entry_EIne[4:6])
+            # println(r_entry[1:3], r_entry[4:6])
+            # println(r_entry_EIne[1:3], r_entry_EIne[4:6])
 
             coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
             sma, ecc, inc, OMEGA, omega, nu = coe_entry
 
             rp_kep = sma * (1-ecc)
             ra_kep = sma * (1+ecc)
-            println("rp_kep: ", rp_kep)
-            println("ra_kep: ", ra_kep)
+            # println("rp_kep: ", rp_kep)
+            # println("ra_kep: ", ra_kep)
+            println("idx $i: close but entry direction is opposite...")
             
             # choose the trajectory which ra > 2
             if ra_kep > 2.0
                 # generate state @ periapsis
                 state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
                 state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
-                println("state_rp: ", state_rp)
+                # println("state_rp: ", state_rp)
 
                 # obtian the eccentric anomaly & mean anomaly at entrance
                 cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
@@ -352,7 +354,7 @@ for (i,sol) in enumerate(sim)
 
                 id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
                 id_lunar_rad = id_lunar_rad[2]
-                println("id_lunar_rad: ", id_lunar_rad)
+                # println("id_lunar_rad: ", id_lunar_rad)
                 x_l    = sol.u[id_lunar_rad][1]
                 y_l    = sol.u[id_lunar_rad][2]
                 z_l    = sol.u[id_lunar_rad][3]
@@ -427,7 +429,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_rk4_0321.csv", df)
+CSV.write("grid_search_Tsit5_0322.csv", df)
 
 
 
