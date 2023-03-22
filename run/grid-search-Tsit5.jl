@@ -152,9 +152,10 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 30
-    θs_vec   = [3.35103216382911]  #LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  #
-    ϕ_vec    = [2.72271363311115] #LinRange(0, 2*pi, n+1)[1:n]  # [0.628318530717958]  [0.0]    # 
+    n = 10
+    m = 10
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
+    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-6)
     epsv_vec = 10.0 .^(-6)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -221,11 +222,18 @@ end
 end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
-sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
-            callback=cbs, reltol=1e-12, abstol=1e-12,
+
+# sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
+#             callback=cbs, reltol=1e-12, abstol=1e-12,
+#             save_everystep=true);
+
+sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
+            callback=cbs,
             save_everystep=true);
 
-ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+ptraj = plot(size=(700,500), xlims=(385,395), ylims=(-8,8), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+cmap = :viridis
+
 
 ## data extraction and make csv
 # make dataframe
@@ -243,12 +251,20 @@ df = DataFrame([ name =>[] for name in entries])
 
 
 id = 1
+color_start = "orange"
+color_end = "blue"
+color_gradation = cgrad([color_start, color_end], n*m)
 # extract the ensemble simulation
 for (i,sol) in enumerate(sim)
     global lfb_count = 0
-    println("sol: ", sol.retcode)
     
-    if sol.retcode == :Terminated
+    if sol.retcode == "Terminated"
+        println("sol: ", sol.retcode)
+
+        color = color_gradation[i]
+        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="")
+
+
         # Using Keplar 2 body problem, find the rp analytically
         θsf = grids[i][4]
         r_entry = sol.u[end][1:6]
@@ -257,7 +273,7 @@ for (i,sol) in enumerate(sim)
         θm0 = θmf + param3b.oml * sol.t[end]
 
         r_entry_EIne = SailorMoon.transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
-        h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
+        h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6], label="")
 
         # println(θm0)
         # println(sol.u[end])
@@ -386,7 +402,7 @@ for (i,sol) in enumerate(sim)
                 m_rp = sol.u[end][7]
 
                 # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], show=true)
+                plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
 
                 push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
                         rp_kep, ra_kep, α, 
@@ -405,13 +421,13 @@ for (i,sol) in enumerate(sim)
     end
 end
 
-scatter!(ptraj, [param3b.as], [0.0])  # roughly earth
+scatter!(ptraj, [param3b.as], [0.0], label="")  # roughly earth
 circle = plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
-plot!(ptraj, circle[1,:], circle[2,:])
+plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search.csv", df)
+CSV.write("grid_search_rk4_0321.csv", df)
 
 
 

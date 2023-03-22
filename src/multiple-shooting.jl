@@ -197,14 +197,19 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
             param_multi.mdot, param_multi.tmax,
             dir_func
         ]
+
+        # rk4() - original
         # _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
         # sol = integrate_rk4(_prob, param_multi.dt);
 
         # Tsit5()
-        _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
-        sol = solve(_prob, Tsit5(), reltol=1e-12, abstol=1e-12)
+        # _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params, method=Tsit5(), reltol=1e-12, abstol=1e-12)
+        # sol = solve(_prob)
 
-        #sol = DifferentialEquations.solve(_prob, RK4(), reltol=1e-10, abstol=1e-10)
+        _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params, method=RK4(), dt=0.005, adaptive=false)
+        sol = solve(_prob)
+
+
         if get_sols
             push!(sol_param_list, [sol, params, name])
         end
