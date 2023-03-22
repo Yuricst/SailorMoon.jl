@@ -176,7 +176,9 @@ function get_LPO_state(x_LPO, θs, param_multi::multishoot_params, verbose::Bool
         _prob_base; tspan=[0,-param_multi.ballistic_time_back],
         u0 = svf_sunb1, p = params
     )
-    sol_ballistic_bck = integrate_rk4(_prob, 0.001);
+    # sol_ballistic_bck = integrate_rk4(_prob, 0.001);
+    sol_ballistic_bck = solve(_prob, Tsit5(); reltol=1e-12, abstol=1e-12);
+
     θ_iter = θs[3] - param3b.oms * param_multi.ballistic_time_back
 
     if verbose
@@ -203,8 +205,8 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
         # sol = integrate_rk4(_prob, param_multi.dt);
 
         # Tsit5()
-        _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params, method=Tsit5(), reltol=1e-12, abstol=1e-12)
-        sol = solve(_prob)
+        _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)
+        sol = solve(_prob, Tsit5(); reltol=1e-12, abstol=1e-12)
 
         # rk4 in DifferentialEquations
         # _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)

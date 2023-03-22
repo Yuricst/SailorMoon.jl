@@ -286,6 +286,22 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
 end
 
 
+"""
+    Earth-Moon rotating direction 
+    According to Scheuerle et al. (2023 AAS), thrusting in the Earth-Moon rotating direction (i.e., tangential direction to the B1->SC vector)
+    is the optimal in order to enhance the Earth-Moon instantaneous Jacobi constant. 
+    Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun 
+"""
+function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+    # vector B1 -> SC 
+    x = state0[1] - as
+    y = state0[2]
+
+    return  [-y/sqrt(x^2+y^2) ,  x/sqrt(x^2+y^2) , 0]
+
+end
+
+
 
 
 """

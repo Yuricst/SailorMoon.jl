@@ -11,9 +11,9 @@ include("../src/SailorMoon.jl")
 
 ### INPUTS ###################################
 # csv file to load the initial solution
-filename = "grid_search_rk4_0321.csv"
+filename = "grid_search_Tsit5_0321.csv"
 # dv_dir function corresponding to the csv file 
-dir_func = SailorMoon.dv_no_thrust 
+dir_func = SailorMoon.dv_EMrotdir_sb1frame 
 
 # 3body parameter
 param3b = SailorMoon.dynamics_parameters()

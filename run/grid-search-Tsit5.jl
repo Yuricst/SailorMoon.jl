@@ -1,21 +1,20 @@
-using Distributed
-include("../src/SailorMoon.jl")
-using DifferentialEquations
-using Plots
-using LinearAlgebra
-import ForwardDiff
-import DiffResults
-using AstrodynamicsBase
-using Printf
-using DataFrames
-using JSON
-using CSV
-
 # addprocs(10)
 @show procs()
 
 @everywhere  begin
+    using Distributed
+    using DifferentialEquations
+    using Plots
+    using LinearAlgebra
+    import ForwardDiff
+    import DiffResults
+    using AstrodynamicsBase
+    using Printf
+    using DataFrames
+    using JSON
+    using CSV
 
+    include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
     param3b = SailorMoon.dynamics_parameters()
@@ -40,9 +39,8 @@ using CSV
     mdot = AstrodynamicsBase.dimensional2canonical_mdot(
         mdot_si, mstar, param3b.tstar
     )
-    dv_fun = SailorMoon.dv_no_thrust
-    mdot = 0.0
-    tmax = 0.0
+    dv_fun = SailorMoon.dv_EMrotdir_sb1frame
+
 
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
@@ -145,9 +143,9 @@ end
     res = R3BP.ssdc_periodic_xzplane([param3b.mu2,], guess0.x0, guess0.period, fix="period")
 
     x0_stm = vcat(res.x0, reshape(I(6), (6^2,)))[:]
-    prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2), method=Tsit5(), reltol=1e-12, abstol=1e-12)
+    prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
     # for Halo propagation, keep the tol as tight as possible 
-    sol = solve(prob_cr3bp_stm) #, saveat=LinRange(0, period, n+1))
+    sol = solve(prob_cr3bp_stm, Tsit5(); reltol=1e-12, abstol=1e-12) #, saveat=LinRange(0, period, n+1))
     monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
@@ -263,8 +261,6 @@ for (i,sol) in enumerate(sim)
     if sol.t[end] > -tof_bck
         # println("sol: ", sol.retcode)
 
-        color = color_gradation[round(-sol.t[end])]
-        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
 
 
         # Using Keplar 2 body problem, find the rp analytically
@@ -416,6 +412,9 @@ for (i,sol) in enumerate(sim)
                         tof_tot,  m0, lfb_count])
                 println("idx $i is a success!")
 
+                color = color_gradation[round(-sol.t[end])]
+                plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
+
                 global id += 1
         
             end
@@ -429,7 +428,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_Tsit5_0322.csv", df)
+CSV.write("grid_search_Tsit5_0322_EMrotThrust.csv", df)
 
 
 
