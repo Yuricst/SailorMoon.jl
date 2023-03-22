@@ -286,9 +286,12 @@ function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, sta
 end
 
 
+
+
 """
 dummy function for the no thrust mode
 """
 function dv_no_thrust(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
     return [0.0, 0.0, 0.0]
 end
+
