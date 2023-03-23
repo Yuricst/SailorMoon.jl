@@ -363,7 +363,7 @@ function rhs_bcr4bp_sb1frame2_thrust!(du,u,p,t)
     θ = θ0 + ωM * t  # moon angle
 
     # create Thrust term
-    dir_v = dv_fun(μS, as, θ, u[1:6], [τ, γ, β])
+    dir_v = dv_fun(μS, as, θ, u[1:6], [τ, γ, β]) 
     Tx, Ty, Tz = dir_v * tmax / u[7]  # mdot
     # println(T)
 

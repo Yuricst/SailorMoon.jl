@@ -15,8 +15,8 @@ end
 
 
 function multi_shoot_parameters(param3b::dynamics_params)
-    tmax_si = 280e-3 * 4   # N
-    isp_si  = 1800   # sec
+    tmax_si = 400e-3   # N
+    isp_si  = 2500   # sec
     mdot_si = tmax_si / (isp_si * 9.81)
     mstar = 2500  # kg
     dt    = 0.005
@@ -200,10 +200,6 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
             dir_func
         ]
 
-        # rk4() - original
-        # _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
-        # sol = integrate_rk4(_prob, param_multi.dt);
-
         # Tsit5()
         _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)
         sol = solve(_prob, Tsit5(); reltol=1e-12, abstol=1e-12)
@@ -211,6 +207,11 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
         # rk4 in DifferentialEquations
         # _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)
         # sol = solve(_prob, RK4(); dt=0.005, adaptive=false)
+
+        # rk4() - original
+        # _prob = remake(_prob_base; tspan=tspan, u0 = sv_iter, p = params)
+        # sol = integrate_rk4(_prob, param_multi.dt);
+
 
 
         if get_sols

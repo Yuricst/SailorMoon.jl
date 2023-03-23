@@ -11,7 +11,7 @@ include("../src/SailorMoon.jl")
 
 ### INPUTS ###################################
 # csv file to load the initial solution
-filename = "grid_search_Tsit5_0321.csv"
+filename = "grid_search_Tsit5_0322_EMrotThrust.csv"
 # dv_dir function corresponding to the csv file 
 dir_func = SailorMoon.dv_EMrotdir_sb1frame 
 
@@ -60,10 +60,11 @@ end
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)
-# println("ub - x0: ", ux - x0)
-# println("x0 - lb: ", x0 - lx)
-# println("x0: ", x0)
-# println("residual (needs to be 0): ", res)
+println("ub - x0: ", ux - x0)
+println("x0 - lb: ", x0 - lx)
+println("ub - lb; ", ux-lx)
+println("x0: ", x0)
+println("residual (needs to be 0): ", res)
 
 # make sure the initial guess is inbetween ub & lb
 vec = vcat(ux - x0, x0 - lx)

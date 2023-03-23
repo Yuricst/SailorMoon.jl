@@ -1,8 +1,9 @@
-# addprocs(10)
-@show procs()
+using Distributed
+
+# addprocs()
+# @show procs()
 
 @everywhere  begin
-    using Distributed
     using DifferentialEquations
     using Plots
     using LinearAlgebra
@@ -25,8 +26,8 @@
     atol = 1e-12
 
     # some inputs needed for the thrust profile
-    tmax_si = 280e-3 * 4  # N
-    isp_si = 1800 # sec
+    tmax_si = 400e-3   # N
+    isp_si = 2500 # sec
     mdot_si = tmax_si / (isp_si * 9.81)
     mstar = 2500  # kg
 
@@ -39,6 +40,7 @@
     mdot = AstrodynamicsBase.dimensional2canonical_mdot(
         mdot_si, mstar, param3b.tstar
     )
+
     dv_fun = SailorMoon.dv_EMrotdir_sb1frame
 
 
@@ -128,7 +130,6 @@
         return circle
     end
 end
-##########################################
 
 @everywhere begin
     t0 = time()
@@ -150,8 +151,8 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 30
-    m = 30
+    n = 10
+    m = 10
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-6)
@@ -259,9 +260,7 @@ for (i,sol) in enumerate(sim)
     # println(sol.t[end] > -tof_bck)
     
     if sol.t[end] > -tof_bck
-        # println("sol: ", sol.retcode)
-
-
+        # println("sol $i : ", sol.retcode)
 
         # Using Keplar 2 body problem, find the rp analytically
         θsf = grids[i][4]
@@ -272,14 +271,8 @@ for (i,sol) in enumerate(sim)
         r_entry_EIne = SailorMoon.transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
         h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
 
-        # println(θm0)
-        # println(sol.u[end])
-        # println("h_entry: ", h_entry)
-
         # we want SC to leave from Earth in CCW direction 
         if h_entry[3] > 0.0
-            # println(r_entry[1:3], r_entry[4:6])
-            # println(r_entry_EIne[1:3], r_entry_EIne[4:6])
 
             coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
             sma, ecc, inc, OMEGA, omega, nu = coe_entry
@@ -288,7 +281,6 @@ for (i,sol) in enumerate(sim)
             ra_kep = sma * (1+ecc)
             # println("rp_kep: ", rp_kep)
             # println("ra_kep: ", ra_kep)
-            println("idx $i: close but entry direction is opposite...")
             
             # choose the trajectory which ra > 2
             if ra_kep > 2.0
@@ -347,7 +339,8 @@ for (i,sol) in enumerate(sim)
                         end
                     end    
                 end
-
+                
+                r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
                 id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
                 id_lunar_rad = id_lunar_rad[2]
                 # println("id_lunar_rad: ", id_lunar_rad)
