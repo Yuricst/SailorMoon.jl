@@ -11,7 +11,7 @@ include("../src/SailorMoon.jl")
 
 ### INPUTS ###################################
 # csv file to load the initial solution
-filename = "grid_search_Tsit5_0322_EMrotThrust.csv"
+filename = "grid_search_Tsit5_0323_EMrotThrust.csv"
 # dv_dir function corresponding to the csv file 
 dir_func = SailorMoon.dv_EMrotdir_sb1frame 
 
@@ -25,7 +25,8 @@ paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 ip_options = Dict(
     "max_iter" => 2500,   # 1500 ~ 2500
     "tol" => 1e-6,
-    "output_file" => "ELET_ipopt.out"
+    "output_file" => "ELET_ipopt.out",
+    "mu_strategy" => "adaptive"
 )
 
 # arc design (1 or 2 or 3)
@@ -49,7 +50,7 @@ if arc_design == 1
     x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
 elseif arc_design == 2
-    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+    x0, lx, ux = SailorMoon.make_ig_bounds2plus(row, τ_ig, paramMulti.n_arc)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 elseif arc_design == 3
     x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
@@ -83,9 +84,11 @@ println("Now, using the initial guess, we reoptimize...")
 
 fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(dir_func, paramMulti, x0)
 
-# make initial guess
 xopt2, fopt2, Info2 = joptimise.minimize(fitness!, xopt, ng;
     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
     options=ip_options, outputfile=true, 
 ) 
 
+
+println("xopt: ", xopt)
+println("xopt2: ", xopt2)

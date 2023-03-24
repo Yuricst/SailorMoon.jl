@@ -43,7 +43,6 @@ using Distributed
 
     dv_fun = SailorMoon.dv_EMrotdir_sb1frame
 
-
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
     function apoapsis_cond(u,t,int)
@@ -208,15 +207,15 @@ end
     # prob = ODEProblem(R3BP.rhs_bcr4bp_thrust!, svf_, tspan, params)
 
     # SB1rot EOM
-    params = [param3b.mu2, param3b.mus, param3b.as, pi, param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.0, 0.0, SailorMoon.dv_sun_dir_angles2]
-    prob = ODEProblem(SailorMoon.rhs_bcr4bp_sb1frame2_thrust!, svf_, tspan, params)
+    params = [param3b.mu2, param3b.mus, param3b.as, pi, param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.0, 0.0, dv_fun, param3b.tstar]
+    prob = ODEProblem(SailorMoon.rhs_bcr4bp_sb1frame2_thrust_bal!, svf_, tspan, params)
 
     # sol_bck = solve(prob_bck, Tsit5(), reltol=1e-12, abstol=1e-12);
 
     ## make ensemble problems
     function prob_func(prob, i, repeat)
         print("\rproblem # $i")
-        remake(prob, u0=grids[i][5], p=p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, mdot, tmax, dv_fun])
+        remake(prob, u0=grids[i][5], p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, mdot, tmax, dv_fun, param3b.tstar])
     end
 end
 
@@ -229,6 +228,9 @@ sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
 #             callback=cbs,
 #             save_everystep=true);
+
+
+
 
 ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
 # plot!(ptraj, xlims=(385,395), ylims=(-8,8))
@@ -421,7 +423,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_Tsit5_0322_EMrotThrust.csv", df)
+CSV.write("grid_search_Tsit5_0323_EMrotThrust.csv", df)
 
 
 

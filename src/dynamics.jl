@@ -400,6 +400,68 @@ function rhs_bcr4bp_sb1frame2_thrust!(du,u,p,t)
     du[7] = -mdot * τ
 end
 
+
+"""
+    adding the coasting term... 
+"""
+function rhs_bcr4bp_sb1frame2_thrust_bal!(du,u,p,t)
+    # unpack state
+    x, y, z = u[1], u[2], u[3]
+    vx, vy, vz = u[4], u[5], u[6]
+    μ2, μS, as, θ0, ωM, ωb = p[1], p[2], p[3], p[4], p[5], p[6]
+    τ, γ, β, mdot, tmax = p[7], p[8], p[9], p[10], p[11]
+    dv_fun = p[12]
+    tstar = p[13]
+
+    θ = θ0 + ωM * t  # moon angle
+
+    t_ballistic = 10 * 24*60*60 / tstar
+    # create Thrust term
+    if abs(t) < t_ballistic
+        dir_v = [0.0, 0.0, 0.0]
+        mdot = 0.0
+        
+        Tx = 0.0
+        Ty = 0.0
+        Tz = 0.0
+    else 
+        dir_v = dv_fun(μS, as, θ, u[1:6], [τ, γ, β]) 
+        Tx, Ty, Tz = dir_v * tmax / u[7]  # mdot
+    end
+
+    # derivatives of positions
+    du[1] = u[4]
+    du[2] = u[5]
+    du[3] = u[6]
+
+    # earth and moon location
+    xe = - μ2 *cos(θ) + as
+    ye = - μ2 *sin(θ)
+    ze = 0
+
+    xm = (1-μ2) *cos(θ) + as
+    ym = (1-μ2) *sin(θ)
+    zm = 0
+#     println(xe, " ", ye, " ", ze)
+
+    # compute distances
+    r30 = sqrt(x^2 + y^2 + z^2)      # SC-Sun
+    r31 = sqrt((xe - x)^2 + (ye - y)^2 + (ze-z)^2)  # SC-earth
+    r32 = sqrt((xm - x)^2 + (ym - y)^2 + (zm-z)^2)  # SC-Moon
+#     println(r30, " ", r31, " ", r32)
+
+    Fx = -(μS)*(x)/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
+    Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
+#     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
+
+    du[4] =  2*ωb*vy + ωb^2*x + Fx
+    du[5] = -2*ωb*vx + ωb^2*y + Fy
+    du[6] =                   + Fz
+
+    du[7] = -mdot * τ
+end
+
 """
 
 Right-hand side expression for state-vector in BCR4BP, thrusting predefined direction
@@ -502,3 +564,5 @@ function rhs_bcr4bp_emframe_thrust!(du,u,p,t)
     # mass derivative
     du[7] = -mdot*τ
 end
+
+

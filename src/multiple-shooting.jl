@@ -23,7 +23,7 @@ function multi_shoot_parameters(param3b::dynamics_params)
     n_arc = 5
 
     ballistic_time      = 1 * 86400 / param3b.tstar
-    ballistic_time_back = 1 * 86400 / param3b.tstar
+    ballistic_time_back = 10 * 86400 / param3b.tstar
 
     tmax = AstrodynamicsBase.dimensional2canonical_thrust(
         tmax_si, mstar, param3b.lstar, param3b.tstar
@@ -44,7 +44,7 @@ params = [
     param3b.mu2, param3b.mus, param3b.as, 0.0, param3b.oml, param3b.omb, 0.0, 0.0, 0.0, 0.0, 0.0,
     dv_no_thrust
 ]
-_prob_base = ODEProblem(rhs_bcr4bp_sb1frame2!, zeros(7,1), [0, -10.0], params);
+_prob_base = ODEProblem(rhs_bcr4bp_sb1frame2_thrust!, zeros(7,1), [0, -10.0], params);
 
 
 function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
@@ -83,6 +83,30 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
 
     # get time of flights
     tofs = [x_lr[8], x_lr[9], x_mid[8], x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        # println("θf: ", θf)
+    end
+    return x_lr, x_mid, x_LPO, tofs, θs
+end
+
+function unpack_x2plus(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_lr  = x[1:9+6*n_arc]
+    x_mid = x[10+6*n_arc:18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc:22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_lr[8], x_lr[9], x_mid[8] - (x_lr[8]+x_lr[9]+x_mid[9]+x_LPO[4]), x_mid[9], x_LPO[4]]
     θf = x_LPO[1]
     θs = [
         θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
@@ -294,7 +318,7 @@ function multishoot_trajectory2(
     ) where T
 
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2plus(x, param_multi.n_arc)
 
     # initialize storage
     sol_param_list = []
@@ -352,6 +376,8 @@ function multishoot_trajectory2(
     # println("alt: ", peri_cond)
 
     # residuals
+    svf_mid_bck[4:6] = - svf_mid_bck[4:6]
+    
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond)[:]
 
     # output
