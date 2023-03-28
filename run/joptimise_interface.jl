@@ -26,13 +26,14 @@ ip_options = Dict(
     "max_iter" => 2500,   # 1500 ~ 2500
     "tol" => 1e-6,
     "output_file" => "ELET_ipopt.out",
-    "mu_strategy" => "adaptive"
+    "mu_strategy" => "adaptive",
+    "acceptable_constr_viol_tol" => 1e-4
 )
 
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "output_0327.csv"
+output_fname = "output_0327_2.csv"
 
 ### PARAMETERS #################################
 
@@ -82,7 +83,7 @@ xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
 )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-vec = vcat(fixed_tof, xopt[ 21 + 12*paramMulti.n_arc ], xopt)
+vec = vcat(fixed_tof, xopt[7], xopt)
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
 
@@ -107,7 +108,7 @@ while true
     ) 
 
     if Info == :Solve_Succeeded
-        vec = vcat(fixed_tof, xopt[ 21 + 12*paramMulti.n_arc ], xopt)
+        vec = vcat(fixed_tof, xopt[7], xopt)
         CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
     else
         println("Optimization couldn't succeed. Terminated... ")

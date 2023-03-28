@@ -111,7 +111,7 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
 
     # x_lr = [x,y,z,vx,vy,vz, m, tof_back, tof_fwd, controls...] (9 + 6*n_arc)
     ig_x_lr = vcat(
-        x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, 1.0,
+        x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, m_lr,
         tof - t_lr, tof_leo2mid/2 + t_lr - tof,
         vcat([[τ_ig,0,0] for i = 1:2*n_arc]...)
     )
@@ -139,7 +139,7 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
     )
 
     ux_lr = vcat(
-        x_lr + 0.3, y_lr + 0.3, z_lr + 0.2 , Inf, Inf, Inf, 1.2*m_rp,
+        x_lr + 0.3, y_lr + 0.3, z_lr + 0.2 , Inf, Inf, Inf, 1.5*m_lr,
         1.2*(tof - t_lr), 1.2*(tof_leo2mid/2 + t_lr - tof),
         vcat([[1.0,pi,pi] for i = 1:2n_arc]...)
     )
@@ -150,17 +150,17 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
         vcat([[0.0,-pi,-pi] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
-        1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), 1.0, Inf, Inf, Inf, 1.2*m_rp,
+        1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), 1.0, Inf, Inf, Inf, 1.5*m_rp,
         1.3*tof_leo2mid/2, 1.3*tof_mid2lpo/2, 
         vcat([[1.0,0,0] for i = 1:2n_arc]...)
     )
 
     lx_lpo = vcat(
-        [-pi, -pi, 0.0, 0.7*tof_mid2lpo/2],
+        [-pi, -pi, 1.000, 0.7*tof_mid2lpo/2],
         vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [3*pi, 3*pi, 1.5, 1.3*tof_mid2lpo/2],
+        [3*pi, 3*pi, 1.000, 1.3*tof_mid2lpo/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
@@ -310,7 +310,7 @@ function make_ig_bounds2plus(row, τ_ig, n_arc::Int64)
 
     # x_lr = [x,y,z,vx,vy,vz, m, tof_back, tof_fwd, controls...] (9 + 6*n_arc)
     ig_x_lr = vcat(
-        x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, 1.0,
+        x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, m_lr,
         tof - t_lr, tof_leo2mid/2 + t_lr - tof,
         vcat([[τ_ig,0,0] for i = 1:2*n_arc]...)
     )
@@ -337,7 +337,7 @@ function make_ig_bounds2plus(row, τ_ig, n_arc::Int64)
     )
 
     ux_lr = vcat(
-        x_lr + 0.3, y_lr + 0.3, z_lr + 0.2 , Inf, Inf, Inf, 1.2*m_rp,
+        x_lr + 0.3, y_lr + 0.3, z_lr + 0.2 , Inf, Inf, Inf, 1.5*m_lr,
         1.2*(tof - t_lr), 1.2*(tof_leo2mid/2 + t_lr - tof),
         vcat([[1.0,pi,pi] for i = 1:2n_arc]...)
     )
@@ -354,11 +354,11 @@ function make_ig_bounds2plus(row, τ_ig, n_arc::Int64)
     )
 
     lx_lpo = vcat(
-        [-pi, -pi, 0.0, 0.7*tof_mid2lpo/2],
+        [-pi, -pi, 1.0, 0.7*tof_mid2lpo/2],
         vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [3*pi, 3*pi, 1.5, 1.3*tof_mid2lpo/2],
+        [3*pi, 3*pi, 1.0, 1.3*tof_mid2lpo/2],
         vcat([[1.0,pi,pi] for i = 1:n_arc]...)
     )
 
