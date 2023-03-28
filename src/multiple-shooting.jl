@@ -318,7 +318,7 @@ function multishoot_trajectory2(
     ) where T
 
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2plus(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
 
     # initialize storage
     sol_param_list = []
@@ -375,9 +375,7 @@ function multishoot_trajectory2(
     peri_cond = norm(sc_earth) - alt
     # println("alt: ", peri_cond)
 
-    # residuals
-    svf_mid_bck[4:6] = - svf_mid_bck[4:6]
-    
+    # residuals  
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond)[:]
 
     # output
@@ -454,3 +452,92 @@ function multishoot_trajectory3(
         return res, sol_param_list, [sol_ballistic_bck], tofs
     end
 end
+
+
+
+"""
+    Updated version of multishoot_trajectory.
+    fixed TOF
+    arcs are: LEO <- x_lr -> <- apogee -> <- LPO
+"""
+function multishoot_trajectory4(
+    x::AbstractVector{T},
+    dir_func, 
+    param_multi::multishoot_params,
+    tof_target::Real,
+    get_sols::Bool=false, 
+    verbose::Bool=false
+    ) where T
+
+    # unpack decision vector
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+
+    # initialize storage
+    sol_param_list = []
+
+    sv_lr = x_lr[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    svm_lr = vcat(sv_lr, x_lr[7])
+
+    # propagate midpoint backward (-> LEO)
+    # FIXME: we probably want to add "coasting" for the final TBD sec. (1 day?)
+    svf_lr_bck = propagate_arc!(
+        svm_lr, θs[1], [0, -tofs[1]/param_multi.n_arc], x_lr[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
+        get_sols, sol_param_list, "xlr_bck_arc"
+    )
+
+    # propaagte midpoint forward
+    svf_lr_fwd = propagate_arc!(
+        svm_lr, θs[1], [0, tofs[2]/param_multi.n_arc], x_lr[10+3*param_multi.n_arc : end], dir_func, param_multi,
+        get_sols, sol_param_list, "xlr_fwd_arc"
+    )
+
+    # propagate midpoint backward
+    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0_cart, x_mid[7])
+
+    svf_mid_bck = propagate_arc!(
+        svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
+        get_sols, sol_param_list, "mid_bck_arc"
+    )
+
+    # propaagte midpoint forward
+    svf_mid_fwd = propagate_arc!(
+        svm0, θs[2], [0, tofs[4]/param_multi.n_arc], x_mid[10+3*param_multi.n_arc : end], dir_func, param_multi,
+        get_sols, sol_param_list, "mid_fwd_arc"
+    )
+
+    # propagate from LPO backward
+    sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
+    svf_lpo = propagate_arc!(
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
+        dir_func, param_multi,
+        get_sols, sol_param_list, "lpo_arc"
+    )
+
+    # periapsis 
+    alt = (6375 + 500) / param3b.lstar
+    θs0 = θs[end] - param3b.oms * sum(tofs)
+    θe0 = 2*pi - θs0    # earth angle at LEO
+    sc_earth = [
+        svf_lr_bck[1] - (param3b.as + param3b.mu2*cos(θe0)),
+        svf_lr_bck[2] - param3b.mu2*sin(θe0),
+        svf_lr_bck[3]
+    ]
+    peri_cond = norm(sc_earth) - alt
+    # println("alt: ", peri_cond)
+
+    tof_cond = tof_target - sum(tofs)
+
+    # residuals    
+    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, tof_cond)[:]
+
+    # output
+    if get_sols == false
+        return res
+    else
+        return res, sol_param_list, [sol_ballistic_bck], tofs
+    end
+end
+
+

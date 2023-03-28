@@ -20,11 +20,6 @@ using Distributed
 
     param3b = SailorMoon.dynamics_parameters()
 
-    # integrator parameters
-    alg = Tsit5()
-    rtol = 1e-12
-    atol = 1e-12
-
     # some inputs needed for the thrust profile
     tmax_si = 400e-3   # N
     isp_si = 2500 # sec
@@ -224,12 +219,11 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
             save_everystep=true);
+tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
 #             callback=cbs,
 #             save_everystep=true);
-
-
 
 
 ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)

@@ -32,6 +32,8 @@ ip_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
+output_fname = "output_0327.csv"
+
 ### PARAMETERS #################################
 
 if dir_func == SailorMoon.dv_no_thrust
@@ -50,7 +52,7 @@ if arc_design == 1
     x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
 elseif arc_design == 2
-    x0, lx, ux = SailorMoon.make_ig_bounds2plus(row, τ_ig, paramMulti.n_arc)
+    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 elseif arc_design == 3
     x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
@@ -61,11 +63,11 @@ end
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)
-println("ub - x0: ", ux - x0)
-println("x0 - lb: ", x0 - lx)
-println("ub - lb; ", ux-lx)
-println("x0: ", x0)
-println("residual (needs to be 0): ", res)
+# println("ub - x0: ", ux - x0)
+# println("x0 - lb: ", x0 - lx)
+# println("ub - lb; ", ux-lx)
+# println("x0: ", x0)
+# println("residual (needs to be 0): ", res)
 
 # make sure the initial guess is inbetween ub & lb
 vec = vcat(ux - x0, x0 - lx)
@@ -73,22 +75,47 @@ vec = vcat(ux - x0, x0 - lx)
 #     error("Error: (At least one element of) initial guess is infinging the defined ub/lb.") 
 # end
 
-# make initial guess
+# inital guess
 xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
     options=ip_options, outputfile=true, 
 )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
+fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
+vec = vcat(fixed_tof, xopt[ 21 + 12*paramMulti.n_arc ], xopt)
+CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+
+
 println(Info)
 println("Now, using the initial guess, we reoptimize...")
 
-fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(dir_func, paramMulti, x0)
+while true
+    global xopt 
 
-xopt2, fopt2, Info2 = joptimise.minimize(fitness!, xopt, ng;
-    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-    options=ip_options, outputfile=true, 
-) 
+    # transfer the TOF (fixed value)
+    fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
+
+    # change the value a little bit... 
+    fixed_tof = fixed_tof - 0.05
+
+    # redefine the equality constriant
+    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, fixed_tof)
+
+    xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
+        lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+        options=ip_options, outputfile=false, 
+    ) 
+
+    if Info == :Solve_Succeeded
+        vec = vcat(fixed_tof, xopt[ 21 + 12*paramMulti.n_arc ], xopt)
+        CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+    else
+        println("Optimization couldn't succeed. Terminated... ")
+        break
+    end
+end
 
 
-println("xopt: ", xopt)
-println("xopt2: ", xopt2)
+
+# function interpolatecolor(cs, val, minval, maxval)
+#     i_val = 255*(val - minval)/(maxval-minval)
