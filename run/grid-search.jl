@@ -38,6 +38,11 @@ using Distributed
 
     dv_fun = SailorMoon.dv_EMrotdir_sb1frame
 
+    if dv_fun == SailorMoon.dv_no_thrust
+        tmax = 0.0
+        mdot = 0.0 
+    end 
+
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
     function apoapsis_cond(u,t,int)
@@ -145,12 +150,12 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 10
-    m = 10
+    n = 30
+    m = 50
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
-    epsr_vec = 10.0 .^(-6)
-    epsv_vec = 10.0 .^(-6)
+    epsr_vec = 10.0 .^(-5)
+    epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
 
     ## make initial conditions 
@@ -218,7 +223,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=true);
+            save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
@@ -417,7 +422,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_Tsit5_0323_EMrotThrust.csv", df)
+CSV.write("grid_search_Tsit5_0402_EMrotThrust.csv", df)
 
 
 

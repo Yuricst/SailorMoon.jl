@@ -1,3 +1,8 @@
+"""
+    Grid search for the initial guess candidates generation using the RK4 (in-house code by Yuri).
+"""
+
+
 using Distributed
 @everywhere begin
     using DifferentialEquations
