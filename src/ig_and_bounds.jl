@@ -279,7 +279,8 @@ end
 
 
 """
-    updated version along with multishoot_trajectory2
+    updated version along with multishoot_trajectory2. 
+    including tof as a variable
 """
 function make_ig_bounds2plus(row, τ_ig, n_arc::Int64)
     sv_mid_cart = [row.x_ra, row.y_ra, row.z_ra, row.xdot_ra, row.ydot_ra, row.zdot_ra]
@@ -367,3 +368,4 @@ function make_ig_bounds2plus(row, τ_ig, n_arc::Int64)
 
     return x0, lx, ux
 end
+
