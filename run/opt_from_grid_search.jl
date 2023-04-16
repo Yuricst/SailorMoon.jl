@@ -33,7 +33,7 @@ ip_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "output_0413.csv"
+output_fname = "output_0414.csv"
 
 ### PARAMETERS #################################
 
@@ -49,16 +49,8 @@ df = DataFrame(CSV.File(filename))
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
 row = df[1,:]
 
-if arc_design == 1
-    x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
-elseif arc_design == 2
-    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
-elseif arc_design == 3
-    x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(dir_func, paramMulti, x0)
-end
+x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 
 # println("initial tof: ", [x0[8], x0[9],  x0[17+6n_arc], x0[18+6n_arc], x0[22+12n_arc]])
 
@@ -68,7 +60,7 @@ res = eval_sft(x0)
 # println("x0 - lb: ", x0 - lx)
 # println("ub - lb; ", ux-lx)
 # println("x0: ", x0)
-# println("residual (needs to be 0): ", res)
+println("residual (needs to be 0): ", res)
 
 # make sure the initial guess is inbetween ub & lb
 vec = vcat(ux - x0, x0 - lx)
@@ -86,37 +78,27 @@ fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMul
 vec = vcat(fixed_tof, xopt[7], xopt)
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
-
 println(Info)
 println("Now, using the initial guess, we reoptimize...")
 
-while true
-    global xopt 
 
-    # transfer the TOF (fixed value)
-    fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
+# first, obtain the terminal mass
+_, sol_param_list, _, _ = SailorMoon.multishoot_trajectory2(xopt, dir_func, paramMulti, true, false) 
+svf_lr_bck = sol_param_list[1]  # lr -> LEO arc 
+sol, _, _ = svf_lr_bck
+fixed_mf = sol.u[end][7]
 
-    # change the value a little bit... 
-    fixed_tof = fixed_tof - 0.05
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixmf_mintof(dir_func, paramMulti, x0, fixed_mf)
 
-    # redefine the equality constriant
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, fixed_tof)
+xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+    options=ip_options, outputfile=false, 
+) 
 
-    xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
-        lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-        options=ip_options, outputfile=false, 
-    ) 
-
-    if Info == :Solve_Succeeded
-        vec = vcat(fixed_tof, xopt[7], xopt)
-        CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
-    else
-        println("Optimization couldn't succeed. Terminated... ")
-        break
-    end
-end
-
-
-
-# function interpolatecolor(cs, val, minval, maxval)
-#     i_val = 255*(val - minval)/(maxval-minval)
+# if Info == :Solve_Succeeded
+#     vec = vcat(fixed_tof, xopt[7], xopt)
+#     CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+# else
+#     println("Optimization couldn't succeed. Terminated... ")
+#     break
+# end

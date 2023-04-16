@@ -33,7 +33,7 @@ ip_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "output_0327_2.csv"
+output_fname = "data/output_0327_2.csv"
 
 ### PARAMETERS #################################
 
@@ -49,16 +49,8 @@ df = DataFrame(CSV.File(filename))
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
 row = df[end,:]
 
-if arc_design == 1
-    x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
-elseif arc_design == 2
-    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
-elseif arc_design == 3
-    x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
-    fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(dir_func, paramMulti, x0)
-end
+x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 
 # println("initial tof: ", [x0[8], x0[9],  x0[17+6n_arc], x0[18+6n_arc], x0[22+12n_arc]])
 
