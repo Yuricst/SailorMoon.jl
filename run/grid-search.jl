@@ -62,13 +62,16 @@ using Distributed
     function periapsis_cond(u,t,int)
         θm0 = int.p[4]
         θm = θm0 + param3b.oml * t
-        r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
-    #     r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
+        # r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
+        # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
         ub = earth_leo_ub 
         lb = earth_leo_lb 
-        
-        if earth_leo_lb < r < earth_leo_ub
-            return dot([u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]], u[4:6])
+
+        r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
+        v_sc = u[4:6]
+               
+        if dot(r_sc_earth, v_sc) / norm(r_sc_earth) / norm(v_sc) < 1e-2
+            return 0 
         else 
             return NaN
         end
@@ -107,7 +110,7 @@ using Distributed
         
     end
 
-    # terminate if the SC is sufficiently close to the earth 
+    # terminate if the SC is sufficiently close to the earth
     function proximity_earth_cond(u,t,int)
         θm0 = int.p[4]
         θm = θm0 + param3b.oml * t
@@ -191,13 +194,13 @@ end
 @everywhere begin
     # terminate_cb = ContinuousCallback(terminate_condition, terminate_affect!; rootfind=false)
     apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
-    # periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
+    periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
     # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
     proximity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
     perilune_cb  = ContinuousCallback(perilune_cond, no_affect!; rootfind=false, save_positions=(false,true))
     lunar_rad_cb = ContinuousCallback(lunar_radius_cond, no_affect!; rootfind=false, save_positions=(false, true), )
     
-    cbs = CallbackSet(apoapsis_cb, proximity_earth_cb, perilune_cb, lunar_rad_cb)
+    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb)
 
     svf_ = zeros(Float64, 1, 7)
     tspan = [0, -tof_bck]
@@ -229,7 +232,6 @@ tofs = [sol.t[end] for sol in sim]
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
 #             callback=cbs,
 #             save_everystep=true);
-
 
 ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
 # plot!(ptraj, xlims=(385,395), ylims=(-8,8))
@@ -422,7 +424,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_Tsit5_0402_EMrotThrust.csv", df)
+CSV.write("grid_search_Tsit5_0414_EMrotThrust.csv", df)
 
 
 
