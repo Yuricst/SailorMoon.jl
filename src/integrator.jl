@@ -14,14 +14,6 @@ end
 
 
 """
-    integrate_rk4(
-        prob::ODEProblem,
-        dt::Real,
-        cbs::Union{Nothing,Vector}=nothing,
-        save_all::Bool=true,
-        exact_tf::Bool=true,
-    )
-
 Fixed-step RK4 integration.
 """
 function integrate_rk4(

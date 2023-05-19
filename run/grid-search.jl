@@ -60,21 +60,25 @@ using Distributed
 
     # store the periapsis value and terminate
     function periapsis_cond(u,t,int)
-        θm0 = int.p[4]
-        θm = θm0 + param3b.oml * t
-        # r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
-        # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
+
         ub = earth_leo_ub 
         lb = earth_leo_lb 
 
-        r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
-        v_sc = u[4:6]
-               
-        if dot(r_sc_earth, v_sc) / norm(r_sc_earth) / norm(v_sc) < 1e-2
-            return 0 
-        else 
-            return NaN
+        r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  
+        val = NaN 
+
+        if r < ub
+            θm0 = int.p[4]
+            θm = θm0 + param3b.oml * t
+            # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
+
+            r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
+            v_sc = u[4:6]
+
+            val = dot(r_sc_earth, v_sc) 
         end
+
+        return val 
     end
 
     function lunar_radius_cond(u,t,int)
@@ -149,12 +153,13 @@ end
     prob_cr3bp_stm = ODEProblem(R3BP.rhs_cr3bp_svstm!, x0_stm, res.period, (param3b.mu2))
     # for Halo propagation, keep the tol as tight as possible 
     sol = solve(prob_cr3bp_stm, Tsit5(); reltol=1e-12, abstol=1e-12) #, saveat=LinRange(0, period, n+1))
+
     monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 30
-    m = 50
+    n = 10
+    m = 150
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-5)
@@ -196,7 +201,7 @@ end
     apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
     periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
     # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
-    proximity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
+    # proximity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
     perilune_cb  = ContinuousCallback(perilune_cond, no_affect!; rootfind=false, save_positions=(false,true))
     lunar_rad_cb = ContinuousCallback(lunar_radius_cond, no_affect!; rootfind=false, save_positions=(false, true), )
     
@@ -224,7 +229,7 @@ end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
-sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=length(grids),
+sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
             save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
@@ -424,7 +429,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("grid_search_Tsit5_0414_EMrotThrust.csv", df)
+CSV.write("data/grid_search_Tsit5_0414_EMrotThrust.csv", df)
 
 
 
