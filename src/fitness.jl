@@ -7,7 +7,8 @@ Generate fitness function
 """
 
 """
-    for differential correction. Objective is constant 
+    Differential correction (Objective is constant). 
+    free ToF and m_LEO
 """
 function get_fitness2(
     dir_func,
@@ -63,7 +64,10 @@ function get_fitness2(
     return fitness!, ng, lg, ug, eval_sft
 end
 
-
+"""
+    minimization of ToF.
+    free ToF and m_LEO
+"""
 function get_fitness2_minToF(
     dir_func,
     param_multi::multishoot_params,
@@ -177,7 +181,7 @@ function get_fitness2_fixToF(
 end
 
 """
-    fix mf, minimize tof
+    fix m_LEO, minimize ToF
 """
 function get_fitness2_fixmf_mintof(
     dir_func,

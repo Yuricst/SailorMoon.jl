@@ -47,29 +47,6 @@ params = [
 _prob_base = ODEProblem(rhs_bcr4bp_sb1frame2_thrust!, zeros(7,1), [0, -10.0], params);
 
 
-function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
-    # unpack
-    nx = length(x)
-    x_LEO = x[1:5+3n_arc]
-    x_mid = x[6+3n_arc:14+9n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
-    x_LPO = x[15+9n_arc:18+12n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
-
-    # get time of flights
-    tofs = [x_LEO[5], x_mid[8], x_mid[9], x_LPO[4]]
-    θf = x_LPO[1]
-    θs = [
-        θf - param3b.oms*sum(broadcast(abs, tofs)),
-        θf - param3b.oms*sum(broadcast(abs, tofs[3:4])),
-        θf
-    ]
-    # print message
-    if verbose
-        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
-        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
-        println("θf: ", θf)
-    end
-    return x_LEO, x_mid, x_LPO, tofs, θs
-end
 
 """
     unpacking variables along with multishoot_trajectory2
@@ -77,9 +54,9 @@ end
 function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
     # unpack
     nx = length(x)
-    x_lr  = x[1:9+6*n_arc]
-    x_mid = x[10+6*n_arc:18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
-    x_LPO = x[19+12*n_arc:22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+    x_lr  = x[1 : 9+6*n_arc]
+    x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
 
     # get time of flights
     tofs = [x_lr[8], x_lr[9], x_mid[8], x_mid[9], x_LPO[4]]
@@ -122,30 +99,6 @@ function unpack_x2plus(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) wh
     return x_lr, x_mid, x_LPO, tofs, θs
 end
 
-function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
-    # unpack
-    nx = length(x)
-    x_LEO = x[1 : 5+3*n_arc]
-    x_lr  = x[6+3*n_arc : 13+6*n_arc]
-    x_mid = x[14+6*n_arc : 22+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
-    x_LPO = x[23+12*n_arc : 26+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
-
-    # get time of flights
-    tofs = [x_LEO[5], x_lr[8], x_mid[8], x_mid[9], x_LPO[4]]
-    θf = x_LPO[1]
-    θs = [
-        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
-        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
-        θf
-    ]
-    # print message
-    if verbose
-        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
-        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
-        # println("θf: ", θf)
-    end
-    return x_LEO, x_lr, x_mid, x_LPO, tofs, θs
-end
 
 
 function get_LEO_state(x_LEO, θs, param_multi::multishoot_params, verbose::Bool=false)
@@ -393,7 +346,7 @@ function multishoot_trajectory4(
     # propagate from LPO backward
     sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
     svf_lpo = propagate_arc!(
-        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
+        sv0_LPO, θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
         dir_func, param_multi,
         get_sols, sol_param_list, "lpo_arc"
     )
@@ -432,14 +385,14 @@ end
 
 """
     Updated version of multishoot_trajectory2.
-    fixed mf
+    fixed m_LEO
     arcs are: LEO <- x_lr -> <- apogee -> <- LPO
 """
 function multishoot_trajectory5(
     x::AbstractVector{T},
     dir_func, 
     param_multi::multishoot_params,
-    mf_target::Real,
+    mleo_target::Real,
     get_sols::Bool=false, 
     verbose::Bool=false
     ) where T
@@ -502,14 +455,14 @@ function multishoot_trajectory5(
     peri_cond = norm(sc_earth) - alt
     # println("alt: ", peri_cond)
 
-    mf_cond = mf_target - svf_lr_bck[7]
+    m_leo_cond = mleo_target - svf_lr_bck[7]
 
     # LEO tangential departure condition
     dep_LEO = sc_earth[1]*svf_lr_bck[4] + sc_earth[2]*svf_lr_bck[5] + sc_earth[3]*svf_lr_bck[6]
     dep_LEO = 0.0
 
     # residuals    
-    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, mf_cond, dep_LEO)[:]
+    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, m_leo_cond, dep_LEO)[:]
 
     # output
     if get_sols == false
@@ -523,6 +476,58 @@ end
 
 
 ## ----- Not used as of now --------------------------------------------
+
+
+function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_LEO = x[1:5+3n_arc]
+    x_mid = x[6+3n_arc:14+9n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[15+9n_arc:18+12n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_LEO[5], x_mid[8], x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs)),
+        θf - param3b.oms*sum(broadcast(abs, tofs[3:4])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        println("θf: ", θf)
+    end
+    return x_LEO, x_mid, x_LPO, tofs, θs
+end
+
+function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_LEO = x[1 : 5+3*n_arc]
+    x_lr  = x[6+3*n_arc : 13+6*n_arc]
+    x_mid = x[14+6*n_arc : 22+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[23+12*n_arc : 26+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_LEO[5], x_lr[8], x_mid[8], x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        # println("θf: ", θf)
+    end
+    return x_LEO, x_lr, x_mid, x_LPO, tofs, θs
+end
+
+
 
 """
     arc: LEO -> <- apogee -> <- LPO

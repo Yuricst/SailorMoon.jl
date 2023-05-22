@@ -11,7 +11,7 @@ include("../src/SailorMoon.jl")
 
 ### INPUTS ###################################
 # csv file to load the initial solution
-filename = "data/grid_search_Tsit5_0323_EMrotThrust.csv"
+filename = "data/grid_search_Tsit5_0414_EMrotThrust.csv"
 # dv_dir function corresponding to the csv file 
 dir_func = SailorMoon.dv_EMrotdir_sb1frame 
 
@@ -33,7 +33,7 @@ ip_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "output_0414.csv"
+output_fname = "output_05148.csv"
 
 ### PARAMETERS #################################
 

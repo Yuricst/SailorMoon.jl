@@ -62,8 +62,7 @@ using Distributed
     function periapsis_cond(u,t,int)
 
         ub = earth_leo_ub 
-        lb = earth_leo_lb 
-
+        
         r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  
         val = NaN 
 
@@ -143,7 +142,7 @@ end
 
     ## set up of initial condition (Lyapunov orbit)
     lp = 2
-    Az_km = 1200.0
+    Az_km = 0.0
     println("Halo guess Az_km: $Az_km")
     northsouth = 3   # 1 or 3
     guess0 = R3BP.halo_analytical_construct(param3b.mu2, lp, Az_km, param3b.lstar, northsouth)
@@ -158,7 +157,7 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 10
+    n = 60
     m = 150
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
@@ -253,7 +252,7 @@ entries = [
     "x_ra", "y_ra", "z_ra", "xdot_ra", "ydot_ra", "zdot_ra", "m_ra",
     "x_rp", "y_rp", "z_rp", "xdot_rp", "ydot_rp", "zdot_rp", "m_rp",
     "x_lr", "y_lr", "z_lr", "xdot_lr", "ydot_lr", "zdot_lr", "m_lr", "t_lr",
-    "tof", "m0", "lfb"
+    "tof", "lfb"
 ]
 df = DataFrame([ name =>[] for name in entries])
 
@@ -379,7 +378,6 @@ for (i,sol) in enumerate(sim)
                     α = -α
                 end
 
-                m0 = sol.u[end][end]
 
                 ϕ0  = grids[i][1]
                 ϵr  = grids[i][2]
@@ -410,7 +408,7 @@ for (i,sol) in enumerate(sim)
                         x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
                         x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
                         x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
-                        tof_tot,  m0, lfb_count])
+                        tof_tot, lfb_count])
                 println("idx $i is a success!")
 
                 color = color_gradation[round(-sol.t[end])]
@@ -429,7 +427,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("data/grid_search_Tsit5_0414_EMrotThrust.csv", df)
+CSV.write("data/grid_search_Tsit5_0522_EMrotThrust.csv", df)
 
 
 
