@@ -18,6 +18,8 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
+    out_fname = "data/grid_search_Tsit5_0522_EMrotThrust.csv"
+
     param3b = SailorMoon.dynamics_parameters()
 
     # some inputs needed for the thrust profile
@@ -427,7 +429,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write("data/grid_search_Tsit5_0522_EMrotThrust.csv", df)
+CSV.write(out_fname, df)
 
 
 
