@@ -60,7 +60,7 @@ using Distributed
         end
     end
 
-    # store the periapsis value and terminate
+    # store the periapsis around Earth value and terminate
     function periapsis_cond(u,t,int)
 
         ub = earth_leo_ub 

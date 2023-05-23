@@ -265,6 +265,7 @@ function multishoot_trajectory2(
     alt = (6375 + 500) / param3b.lstar
     θs0 = θs[end] - param3b.oms * sum(tofs)
     θe0 = 2*pi - θs0    # earth angle at LEO
+
     # Earth -> SC vector
     sc_earth = [
         svf_lr_bck[1] - (param3b.as + param3b.mu2*cos(θe0)),
@@ -272,11 +273,12 @@ function multishoot_trajectory2(
         svf_lr_bck[3]
     ]
     peri_cond = norm(sc_earth) - alt
+    # println("|sc_earth| = ", norm(sc_earth)*param3b.lstar)
     # println("alt: ", peri_cond)
 
     # SC needs to be launched tangentially to the Earth: dot(r_{E,SC}, v_SC) = 0 
     dep_LEO = sc_earth[1]*svf_lr_bck[4] + sc_earth[2]*svf_lr_bck[5] + sc_earth[3]*svf_lr_bck[6]
-    dep_LEO = 0.0
+    # dep_LEO = 0.0
 
     # residuals  
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, dep_LEO)[:]
@@ -382,7 +384,6 @@ function multishoot_trajectory4(
 end
 
 
-
 """
     Updated version of multishoot_trajectory2.
     fixed m_LEO
@@ -477,7 +478,6 @@ end
 
 ## ----- Not used as of now --------------------------------------------
 
-
 function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
     # unpack
     nx = length(x)
@@ -526,7 +526,6 @@ function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
     end
     return x_LEO, x_lr, x_mid, x_LPO, tofs, θs
 end
-
 
 
 """

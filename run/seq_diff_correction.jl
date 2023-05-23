@@ -24,7 +24,7 @@ paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
 # run minimizer with IPOPT
 ip_options = Dict(
-    "max_iter" => 2500,   # 1500 ~ 2500
+    "max_iter" => 50,   # 1500 ~ 2500
     "tol" => 1e-6,
     "output_file" => "ELET_ipopt.out",
     "mu_strategy" => "adaptive",
@@ -47,10 +47,11 @@ end
 # load initial guess ( "grid_serach_XXX.csv" )
 df = DataFrame(CSV.File(filename))
 
+height = size(df,1)
 for (m, row) in enumerate( eachrow( df ) ) 
 
     # perform the differential correction only if there is no flyby
-    if row[end] == 0
+    if row[end] == 0  && row.rp_kep * param3b.lstar > 4000 
 
         if arc_design == 1
             x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
@@ -65,11 +66,12 @@ for (m, row) in enumerate( eachrow( df ) )
 
         # checking if the initial guess is good enough
         res = eval_sft(x0)
+        println("altitude difference: ", res[end-1]*param3b.lstar, " km")
         # println("ub - x0: ", ux - x0)
         # println("x0 - lb: ", x0 - lx)
         # println("ub - lb; ", ux-lx)
         # println("x0: ", x0)
-        # println("residual (needs to be 0): ", res)
+        println("residual (needs to be 0): ", res)
 
         # _, sol_list, sol_bal, _ = SailorMoon.multishoot_trajectory2(x0, dir_func, paramMulti, true, false)
         # for j = 1:length(sol_list)
@@ -117,6 +119,8 @@ for (m, row) in enumerate( eachrow( df ) )
         #     end
         # end
     
+    else
+        println("candidate #", m, "/", height,  " not meeting the condition.")
     end
 
 end
