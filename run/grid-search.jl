@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0522_EMrotThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0524_EMrotThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -84,8 +84,8 @@ using Distributed
 
     function lunar_radius_cond(u,t,int)
         # usually LPO ~ apogee is about Dt = 12~14
-        if t > 12 
-            return abs(u[1:3]) - param3b.mu1
+        if abs(t) > 8
+            return param3b.mu1 - sqrt((u[1] - param3b.as)^2 + u[2]^2 + u[3]^2) 
         else
             return NaN
         end
@@ -115,7 +115,7 @@ using Distributed
         # end
 
         # check when the SC passes the boundary of the lunar SOI
-        return r - moon_soi 
+        return moon_soi - r  
         
     end
 
@@ -126,7 +126,7 @@ using Distributed
         r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
         return r - 12000 / param3b.lstar
     end
-    
+
     # affect!
     terminate_affect!(int) = terminate!(int)
     no_affect!(int) = NaN
@@ -163,10 +163,10 @@ end
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
     ## Grid search parameters: CHANGE HERE
-    n = 60
-    m = 150
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
-    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
+    n = 10
+    m = 30
+    θs_vec   = [2.722713633]  # LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
+    ϕ_vec    = [0.0]  # LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -207,8 +207,8 @@ end
     periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
     # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
     # proximity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
-    perilune_cb  = ContinuousCallback(perilune_cond, no_affect!; rootfind=false, save_positions=(false,true))
-    lunar_rad_cb = ContinuousCallback(lunar_radius_cond, no_affect!; rootfind=false, save_positions=(false, true), )
+    perilune_cb  = ContinuousCallback(perilune_cond, no_affect!, nothing; rootfind=true, save_positions=(false,true))
+    lunar_rad_cb = ContinuousCallback(lunar_radius_cond, no_affect!, nothing; rootfind=true, save_positions=(false, true), )
     
     cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb)
 
@@ -258,7 +258,7 @@ entries = [
     "x_ra", "y_ra", "z_ra", "xdot_ra", "ydot_ra", "zdot_ra", "m_ra",
     "x_rp", "y_rp", "z_rp", "xdot_rp", "ydot_rp", "zdot_rp", "m_rp",
     "x_lr", "y_lr", "z_lr", "xdot_lr", "ydot_lr", "zdot_lr", "m_lr", "t_lr",
-    "tof", "lfb"
+    "tof", "lrad_cross", "lfb"
 ]
 df = DataFrame([ name =>[] for name in entries])
 
@@ -270,6 +270,7 @@ color_gradation = cgrad([color_start, color_end], tof_bck)
 # extract the ensemble simulation
 for (i,sol) in enumerate(sim)
     global lfb_count = 0
+    global lradius_cross = 0
     # println(sol.t[end] > -tof_bck)
     
     if sol.t[end] > -tof_bck
@@ -339,18 +340,31 @@ for (i,sol) in enumerate(sim)
                 zdot_ra = sol.u[id_ra][6]
                 m_ra = sol.u[id_ra][7]                   
 
-                # flag: lunar flyby? (cf. moon SOI = 66100 km)
-                rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
-                            +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
-                            +   hcat(sol.u...)[3,:].^2)
-                id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
+                # # flag: lunar flyby? (cf. moon SOI = 66100 km)
+                # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
+                #             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
+                #             +   hcat(sol.u...)[3,:].^2)
+                # id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
                         
-                if ~isempty(id_lfb)
-                    for k in id_lfb
-                        if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
-                            global lfb_count += 1
-                        end
-                    end    
+                # if ~isempty(id_lfb)
+                #     for k in id_lfb
+                #         if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
+                #             global lfb_count += 1
+                #         end
+                #     end    
+                # end
+
+                # another way to count lunar flyby and lunar radius crossing 
+                for (i, x) in enumerate(sol.u)
+                    t = sol.t[i]
+                    println("prilune cond: ", perilune_cond(x, t, pi - θsf))
+                    if abs(perilune_cond(x, t, pi - θsf)) < 1e-10
+                        global lfb_count += 1
+                    end
+
+                    if lunar_radius_cond(x, t, pi - θsf) < 1e-10
+                        global lradius_cross += 1
+                    end
                 end
                 
                 r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
@@ -414,7 +428,7 @@ for (i,sol) in enumerate(sim)
                         x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
                         x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
                         x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
-                        tof_tot, lfb_count])
+                        tof_tot, lradius_cross, lfb_count])
                 println("idx $i is a success!")
 
                 color = color_gradation[round(-sol.t[end])]
