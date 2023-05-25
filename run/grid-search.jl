@@ -48,8 +48,8 @@ using Distributed
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
     function apoapsis_cond(u,t,int)
-        θm0 = int.p[4]
-        θm = θm0 + param3b.oml * t
+        θmLPO = int.p[4]
+        θm = θmLPO + param3b.oml * t
         
         # for convenience, instead of taking the distance of SC-moon, assume r_a > 2.0
         if sqrt((u[1]-param3b.as)^2 + u[2]^2 + u[3]^2) > 2.0
@@ -69,8 +69,8 @@ using Distributed
         val = NaN 
 
         if r < ub
-            θm0 = int.p[4]
-            θm = θm0 + param3b.oml * t
+            θmLPO = int.p[4]
+            θm = θmLPO + param3b.oml * t
             # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
 
             r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
@@ -95,23 +95,27 @@ using Distributed
 
     function perilune_cond(u,t,int)
         if isa(int, AbstractFloat)
-            θm0 = int
+            θmLPO = int
         else
-            θm0 = int.p[4]
+            θmLPO = int.p[4]
         end
 
-        θm  = θm0 + param3b.oml * t
+        θm  = θmLPO + param3b.oml * t
         
         # moon-SC distance
         r = sqrt((u[1] - param3b.as - (1-param3b.mu2)*cos(θm))^2 + (u[2] - (1-param3b.mu2)*sin(θm)) ^2 + u[3]^2)
         moon_soi = 66100 / param3b.lstar
         v_moon   = (1-param3b.mu2)*param3b.oml * [-sin(θm), cos(θm), 0] 
         
-        if r < moon_soi #&& -t > (10*86400 / param3b.tstar)
-            return dot([u[1] - param3b.as - (1-param3b.mu2) * cos(θm), u[2] - (1-param3b.mu2) * sin(θm), u[3]], u[4:6]-v_moon)
-        else 
-            return NaN
-        end
+        # strict perilune condition
+        # if r < moon_soi #&& -t > (10*86400 / param3b.tstar)
+        #     return dot([u[1] - param3b.as - (1-param3b.mu2) * cos(θm), u[2] - (1-param3b.mu2) * sin(θm), u[3]], u[4:6]-v_moon)
+        # else 
+        #     return NaN
+        # end
+
+        # check when the SC passes the boundary of the lunar SOI
+        return r - moon_soi 
         
     end
 
@@ -291,8 +295,8 @@ for (i,sol) in enumerate(sim)
             # println("rp_kep: ", rp_kep)
             # println("ra_kep: ", ra_kep)
             
-            # choose the trajectory which ra > 2
-            if ra_kep > 2.0
+            # choose the trajectory which ra > 2 and rp > 3000 km
+            if ra_kep > 2 && rp_kep < 3000 / param3b.lstar
                 # generate state @ periapsis
                 state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
                 state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
@@ -335,7 +339,7 @@ for (i,sol) in enumerate(sim)
                 zdot_ra = sol.u[id_ra][6]
                 m_ra = sol.u[id_ra][7]                   
 
-                # flag: lunar flyby? 
+                # flag: lunar flyby? (cf. moon SOI = 66100 km)
                 rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
                             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
                             +   hcat(sol.u...)[3,:].^2)
@@ -343,7 +347,7 @@ for (i,sol) in enumerate(sim)
                         
                 if ~isempty(id_lfb)
                     for k in id_lfb
-                        if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - grids[i][4]))
+                        if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
                             global lfb_count += 1
                         end
                     end    
