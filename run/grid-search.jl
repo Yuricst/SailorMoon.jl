@@ -234,8 +234,6 @@ end
     end
 end
 
-# println("grids: $grids")
-
 ## initialize problem 
 
 # include callback functions 

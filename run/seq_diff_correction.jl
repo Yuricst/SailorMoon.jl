@@ -12,7 +12,7 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/grid_search_Tsit5_0522_EMrotThrust.csv"
+filename = "data/grid_search_Tsit5_0525_EMrotThrust.csv"
 # dv_dir function corresponding to the csv file 
 dir_func = SailorMoon.dv_EMrotdir_sb1frame 
 
@@ -51,7 +51,7 @@ height = size(df,1)
 for (m, row) in enumerate( eachrow( df ) ) 
 
     # perform the differential correction only if there is no flyby
-    if row[end] == 0  && row.rp_kep * param3b.lstar > 4000 
+    if row.lfb == 0   
 
         if arc_design == 1
             x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
