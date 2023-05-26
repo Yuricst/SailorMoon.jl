@@ -34,7 +34,7 @@ ip_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "data/output_0522.csv"
+output_fname = "data/output_0526.csv"
 
 # ===============================================================
 
@@ -48,7 +48,9 @@ end
 df = DataFrame(CSV.File(filename))
 
 height = size(df,1)
-for (m, row) in enumerate( eachrow( df ) ) 
+# for (m, row) in enumerate( eachrow( df ) ) 
+
+row = df[2,:]
 
     # perform the differential correction only if there is no flyby
     if row.lfb == 0   
@@ -123,4 +125,4 @@ for (m, row) in enumerate( eachrow( df ) )
         println("candidate #", m, "/", height,  " not meeting the condition.")
     end
 
-end
+# end
