@@ -56,36 +56,37 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
 
 
     ### lb, ub of variables 
+    # for the lyapunov orbit, everything is 2D, so just set β=0 in [τ, γ, β]
     lx_lr = vcat(
         x_lr - 0.3, y_lr - 0.3, z_lr - 0.2 , -Inf, -Inf, -Inf, 1.0,
         0.8*(tof - t_lr), 0.8*(tof_leo2mid/2 + t_lr - tof),
-        vcat([[0.0,-pi,-pi] for i = 1:2n_arc]...)
+        vcat([[0.0,-pi,0.0] for i = 1:2n_arc]...)
     )
 
     ux_lr = vcat(
         x_lr + 0.3, y_lr + 0.3, z_lr + 0.2 , Inf, Inf, Inf, 1.5*m_lr,
         1.2*(tof - t_lr), 1.2*(tof_leo2mid/2 + t_lr - tof),
-        vcat([[1.0,pi,pi] for i = 1:2n_arc]...)
+        vcat([[1.0,pi,0.0] for i = 1:2n_arc]...)
     )
 
     lx_mid = vcat(
         0.8*svm_mid_cyl[1], (svm_mid_cyl[2]-pi/12), -1.0, -Inf, -Inf, -Inf, 1.0, 
         0.7*tof_leo2mid/2, 0.7*tof_mid2lpo/2, 
-        vcat([[0.0,-pi,-pi] for i = 1:2n_arc]...)
+        vcat([[0.0,-pi,0.0] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
         1.2*svm_mid_cyl[1], (svm_mid_cyl[2]+pi/12), 1.0, Inf, Inf, Inf, 1.5*m_rp,
         1.3*tof_leo2mid/2, 1.3*tof_mid2lpo/2, 
-        vcat([[1.0,0,0] for i = 1:2n_arc]...)
+        vcat([[1.0,0,0.0] for i = 1:2n_arc]...)
     )
 
     lx_lpo = vcat(
         [-pi, -pi, 1.000, 0.7*tof_mid2lpo/2],
-        vcat([[0.0,-pi,-pi] for i = 1:n_arc]...)
+        vcat([[0.0,-pi,0.0] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
         [3*pi, 3*pi, 1.000, 1.3*tof_mid2lpo/2],
-        vcat([[1.0,pi,pi] for i = 1:n_arc]...)
+        vcat([[1.0,pi,0.0] for i = 1:n_arc]...)
     )
 
     lx = vcat(lx_lr, lx_mid, lx_lpo)

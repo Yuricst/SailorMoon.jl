@@ -310,22 +310,23 @@ function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Ve
     sin_γ = sin(γ)
     cos_γ = cos(γ)
     
+    # rot about y-axis 
     rot1 = [
-        cos_β 0 sin_β
-        0     1 0
+        cos_β  0 sin_β
+        0      1 0
         -sin_β 0 cos_β
     ]
+
+    # rot about z-axis 
     rot2 = [
         cos_γ -sin_γ 0 
-        sin_γ cos_γ 0
-        0 0 1
+        sin_γ cos_γ  0
+        0     0      1
     ]
 
     return τ * rot1 * rot2 * dir 
 
 end
-
-
 
 
 """
