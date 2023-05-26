@@ -202,9 +202,9 @@ end
 
     ## Grid search parameters: CHANGE HERE
     n = 60
-    m = 150
-    θs_vec   = [0.104719755]  # LinRange(0, 2*pi, n+1)[1:n]  # [3.76991118430775]   #[180/180*pi]  # [3.35103216382911]  
-    ϕ_vec    = [0.335103216]  # LinRange(0, 2*pi, m+1)[1:m]  # [0.628318530717958]  [0.0]    # [2.72271363311115]
+    m = 300
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755]    #[180/180*pi]  # [3.35103216382911]  
+    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    # [2.72271363311115]
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -413,10 +413,6 @@ for (i,sol) in enumerate(sim)
                     end
                     
                     # check the first periapsis and see if it's in the LEO range...
-
-
-
-
                     r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
                     id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
                     id_lunar_rad = id_lunar_rad[2]
