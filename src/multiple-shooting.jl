@@ -369,8 +369,7 @@ function multishoot_trajectory4(
 
     # LEO tangential departure condition
     dep_LEO = sc_earth[1]*svf_lr_bck[4] + sc_earth[2]*svf_lr_bck[5] + sc_earth[3]*svf_lr_bck[6]
-    dep_LEO = 0.0
-
+    # dep_LEO = 0.0
 
     # residuals    
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, tof_cond, dep_LEO)[:]
@@ -460,7 +459,7 @@ function multishoot_trajectory5(
 
     # LEO tangential departure condition
     dep_LEO = sc_earth[1]*svf_lr_bck[4] + sc_earth[2]*svf_lr_bck[5] + sc_earth[3]*svf_lr_bck[6]
-    dep_LEO = 0.0
+    # dep_LEO = 0.0
 
     # residuals    
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, m_leo_cond, dep_LEO)[:]

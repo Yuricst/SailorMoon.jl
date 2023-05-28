@@ -15,7 +15,7 @@ function get_fitness2(
     param_multi::multishoot_params,
     x
 )
-    # number of constraints: 7 states (pos,vel,mass) * 2 
+    # number of constraints: 7 states (pos,vel,mass) * 2 + 2 (rp & tangential departure)
     ng = 16
 
     # function that computes constraints of SFT
@@ -52,7 +52,7 @@ function get_fitness2(
     # create objective function
     fitness! = function (g, x::AbstractVector{T}) where T
         # evaluate objective & objective gradient (trivial)
-        f = 1.0  
+        f = 1.0
         g[:] = eval_sft(x)       # constraints (that need to be zero)
         # println("g(res): ", round.(g[:], digits=3))
         return f

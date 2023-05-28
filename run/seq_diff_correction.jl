@@ -24,8 +24,8 @@ paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
 # run minimizer with IPOPT
 ip_options = Dict(
-    "max_iter" => 50,   # 1500 ~ 2500
-    "tol" => 1e-6,
+    "max_iter" => 100,   # 1500 ~ 2500
+    "tol" => 1e-4,
     "output_file" => "ELET_ipopt.out",
     "mu_strategy" => "adaptive",
     "acceptable_constr_viol_tol" => 1e-4
@@ -47,13 +47,14 @@ df = DataFrame(CSV.File(filename))
 height = size(df,1)
 # for (m, row) in enumerate( eachrow( df ) ) 
 
-row = df[21,:]
+row = df[10,:]
 
     # perform the differential correction only if there is no flyby
     if row.lfb == 0   
 
         x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
         fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
+        # fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, row.tof)
 
         # checking if the initial guess is good enough
         res = eval_sft(x0)
@@ -111,7 +112,7 @@ row = df[21,:]
         # end
     
     else
-        println("candidate #", m, "/", height,  " not meeting the condition.")
+        # println("candidate #", m, "/", height,  " not meeting the condition.")
     end
 
 # end
