@@ -31,9 +31,10 @@ function get_fitness2(
     end
 
     nx = 22 + 15*param_multi.n_arc  # number of decision variables 
-    storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
-    df_onehot = zeros(nx)
-    df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
+
+    # storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
+    # df_onehot = zeros(nx)
+    # df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
 
     # # create objective function
     # fitness! = function (g, df, dg, x::AbstractVector{T}) where T
@@ -89,9 +90,10 @@ function get_fitness2_minToF(
     end
 
     nx = 22 + 15*param_multi.n_arc  # number of decision variables 
-    storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
-    df_onehot = zeros(nx)
-    df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
+
+    # storage_ad = DiffResults.JacobianResult(x)  # initialize storage for AD
+    # df_onehot = zeros(nx)
+    # df_onehot[2] = 1.0   # insert 1 to whichever index of x corresponding to e.g. mass at LEO
 
     # # create objective function
     # fitness! = function (g, df, dg, x::AbstractVector{T}) where T

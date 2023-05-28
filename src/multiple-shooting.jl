@@ -262,7 +262,7 @@ function multishoot_trajectory2(
     )
 
     # periapsis 
-    alt = (6375 + 500) / param3b.lstar
+    rp_target = (6375 + 500) / param3b.lstar
     θs0 = θs[end] - param3b.oms * sum(tofs)
     θe0 = 2*pi - θs0    # earth angle at LEO
 
@@ -272,7 +272,7 @@ function multishoot_trajectory2(
         svf_lr_bck[2] - param3b.mu2*sin(θe0),
         svf_lr_bck[3]
     ]
-    peri_cond = norm(sc_earth) - alt
+    peri_cond = norm(sc_earth) - rp_target
     # println("|sc_earth| = ", norm(sc_earth)*param3b.lstar)
     # println("alt: ", peri_cond)
 

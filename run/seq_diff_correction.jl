@@ -31,9 +31,6 @@ ip_options = Dict(
     "acceptable_constr_viol_tol" => 1e-4
 )
 
-# arc design (1 or 2 or 3)
-arc_design = 2
-
 output_fname = "data/output_0526.csv"
 
 # ===============================================================
@@ -50,27 +47,19 @@ df = DataFrame(CSV.File(filename))
 height = size(df,1)
 # for (m, row) in enumerate( eachrow( df ) ) 
 
-row = df[2,:]
+row = df[21,:]
 
     # perform the differential correction only if there is no flyby
     if row.lfb == 0   
 
-        if arc_design == 1
-            x0, lx, ux = SailorMoon.make_ig_bounds(row, τ_ig, paramMulti.n_arc)
-            fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness(dir_func, paramMulti, x0)
-        elseif arc_design == 2
-            x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
-            fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
-        elseif arc_design == 3
-            x0, lx, ux = SailorMoon.make_ig_bounds3(row, τ_ig, paramMulti.n_arc)
-            fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness3(dir_func, paramMulti, x0)
-        end
+        x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+        fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 
         # checking if the initial guess is good enough
         res = eval_sft(x0)
         println("altitude difference: ", res[end-1]*param3b.lstar, " km")
-        # println("ub - x0: ", ux - x0)
-        # println("x0 - lb: ", x0 - lx)
+        println("ub - x0: ", ux - x0)
+        println("x0 - lb: ", x0 - lx)
         # println("ub - lb; ", ux-lx)
         # println("x0: ", x0)
         println("residual (needs to be 0): ", res)
