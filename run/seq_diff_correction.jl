@@ -82,34 +82,34 @@ row = df[10,:]
         vec = vcat(fixed_tof, xopt[7], xopt)
         CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
-        println("optimization #", m)
+        # println("optimization #", m)
 
-        # println("Now, using the initial guess, we reoptimize...")
-        # while true
-        #     global xopt 
+        println("Now, using the initial guess, we reoptimize...")
+        while true
+            global xopt 
 
-        #     # transfer the TOF (fixed value)
-        #     fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
+            # transfer the TOF (fixed value)
+            fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
 
-        #     # change the value a little bit... 
-        #     fixed_tof = fixed_tof - 0.05
+            # change the value a little bit... 
+            fixed_tof = fixed_tof - 0.05
 
-        #     # redefine the equality constriant
-        #     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, fixed_tof)
+            # redefine the equality constriant
+            fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, fixed_tof)
 
-        #     xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
-        #         lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-        #         options=ip_options, outputfile=false, 
-        #     ) 
+            xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
+                lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+                options=ip_options, outputfile=false, 
+            ) 
 
-        #     if Info == :Solve_Succeeded
-        #         vec = vcat(fixed_tof, xopt[7], xopt)
-        #         CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
-        #     else
-        #         println("Optimization couldn't succeed. Terminated... ")
-        #         break
-        #     end
-        # end
+            if Info == :Solve_Succeeded
+                vec = vcat(fixed_tof, xopt[7], xopt)
+                CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+            else
+                println("Optimization couldn't succeed. Terminated... ")
+                break
+            end
+        end
     
     else
         # println("candidate #", m, "/", height,  " not meeting the condition.")

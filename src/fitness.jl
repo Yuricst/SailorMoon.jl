@@ -111,7 +111,7 @@ function get_fitness2_minToF(
     # create objective function
     fitness! = function (g, x::AbstractVector{T}) where T
         # evaluate objective & objective gradient (trivial)
-        f = x[17+6*param_multi.n_arc] #  x[8] + x[9] + x[17+6*param_multi.n_arc] + x[18+6*param_multi.n_arc] + x[22+12*param_multi.n_arc]    # tof
+        f = x[8] + x[9] + x[17+6*param_multi.n_arc] + x[18+6*param_multi.n_arc] + x[22+12*param_multi.n_arc]    # tof
         g[:] = eval_sft(x)       # constraints (that need to be zero)
         # println("g(res): ", round.(g[:], digits=3))
         return f
