@@ -22,6 +22,8 @@ param3b = SailorMoon.dynamics_parameters()
 # multiple shooting parameter
 paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
+optim_solver = "ipopt"
+
 # run minimizer with IPOPT
 ip_options = Dict(
     "max_iter" => 100,   # 1500 ~ 2500
@@ -31,7 +33,16 @@ ip_options = Dict(
     "acceptable_constr_viol_tol" => 1e-4
 )
 
-output_fname = "data/output_0526.csv"
+sn_options = Dict(
+    "Major feasibility tolerance" => 1.e-6,
+    "Major optimality tolerance"  => 1.e-6,
+    "Minor feasibility tolerance" => 1.e-6,
+    "Major iterations limit" => 1000,
+    "Major print level" => 1,
+    "printfile" => "snopt_opt.out",
+)
+
+output_fname = "data/output_0530.csv"
 
 # ===============================================================
 
@@ -58,9 +69,9 @@ row = df[10,:]
 
         # checking if the initial guess is good enough
         res = eval_sft(x0)
-        println("altitude difference: ", res[end-1]*param3b.lstar, " km")
-        println("ub - x0: ", ux - x0)
-        println("x0 - lb: ", x0 - lx)
+        # println("altitude difference: ", res[end-1]*param3b.lstar, " km")
+        # println("ub - x0: ", ux - x0)
+        # println("x0 - lb: ", x0 - lx)
         # println("ub - lb; ", ux-lx)
         # println("x0: ", x0)
         println("residual (needs to be 0): ", res)
@@ -73,18 +84,28 @@ row = df[10,:]
         # end
 
         # inital guess
-        xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+
+        if optim_solver == "ipopt"
+            xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
             lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-            options=ip_options, outputfile=true, 
-        )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+            options=ip_options, outputfile=true,
+            )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+        elseif optim_solver == "snopt"
+            xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+                lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+                options=sn_options, outputfile=true, lencw=5000, iSumm=6,
+            )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+        else 
+            error("optim_solver needs to be ipopt or snopt")
+        end
 
         fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-        vec = vcat(fixed_tof, xopt[7], xopt)
-        CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+        sol_vec = vcat(fixed_tof, xopt[7], xopt)
+        CSV.write(output_fname,  Tables.table(transpose(sol_vec)), writeheader=false, append=true)
 
         # println("optimization #", m)
 
-        println("Now, using the initial guess, we reoptimize...")
+        println("First differential correction is done. Now, using the initial guess, we reoptimize...")
         while true
             global xopt 
 
@@ -97,14 +118,23 @@ row = df[10,:]
             # redefine the equality constriant
             fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, fixed_tof)
 
-            xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
+            if optim_solver == "ipopt"
+                xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
                 lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-                options=ip_options, outputfile=false, 
-            ) 
-
+                options=ip_options, outputfile=true,
+                )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+            elseif optim_solver == "snopt"
+                xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+                    lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+                    options=sn_options, outputfile=true, lencw=5000, iSumm=6,
+                )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+            else 
+                error("optim_solver needs to be ipopt or snopt")
+            end
+            
             if Info == :Solve_Succeeded
-                vec = vcat(fixed_tof, xopt[7], xopt)
-                CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+                sol_vec = vcat(fixed_tof, xopt[7], xopt)
+                CSV.write(output_fname,  Tables.table(transpose(sol_vec)), writeheader=false, append=true)
             else
                 println("Optimization couldn't succeed. Terminated... ")
                 break

@@ -21,6 +21,8 @@ param3b = SailorMoon.dynamics_parameters()
 # multiple shooting parameter
 paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
+optim_solver == "ipopt"
+
 # run minimizer with IPOPT
 ip_options = Dict(
     "max_iter" => 100,   # 1500 ~ 2500
@@ -30,6 +32,15 @@ ip_options = Dict(
     "output_file" => "ELET_ipopt.out",
     "mu_strategy" => "adaptive",
     "acceptable_constr_viol_tol" => 1e-4
+)
+
+sn_options = Dict(
+    "Major feasibility tolerance" => 1.e-6,
+    "Major optimality tolerance"  => 1.e-6,
+    "Minor feasibility tolerance" => 1.e-6,
+    "Major iterations limit" => 1000,
+    "Major print level" => 1,
+    "printfile" => "snopt_opt.out",
 )
 
 # arc design (1 or 2 or 3)
@@ -68,10 +79,19 @@ df = DataFrame(CSV.File(filename))
     println("residual (needs to be 0): ", res)
 
     # inital guess
-    xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+    if optim_solver == "ipopt"
+        xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
         lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-        options=ip_options, outputfile=true, 
-    )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+        options=ip_options, outputfile=true,
+        )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+    elseif optim_solver == "snopt"
+        xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+            lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+            options=sn_options, outputfile=true, lencw=5000, iSumm=6,
+        )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+    else 
+        error("optim_solver needs to be ipopt or snopt")
+    end
 
     tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
     vec = vcat(tof, xopt[7], xopt)
@@ -80,7 +100,6 @@ df = DataFrame(CSV.File(filename))
     println(Info)
     println("Now, using the initial guess, we reoptimize...")
 
-
     # first, obtain the terminal mass
     _, sol_param_list, _, _ = SailorMoon.multishoot_trajectory2(xopt, dir_func, paramMulti, true, false) 
     svf_lr_bck = sol_param_list[1]  # lr -> LEO arc 
@@ -88,10 +107,19 @@ df = DataFrame(CSV.File(filename))
     fixed_mf = sol.u[end][7]
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixmf_mintof(dir_func, paramMulti, x0, fixed_mf)
 
-    xopt, fopt, Info = joptimise.minimize(fitness!, xopt, ng;
+    if optim_solver == "ipopt"
+        xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
         lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-        options=ip_options, outputfile=false, 
-    ) 
+        options=ip_options, outputfile=true,
+        )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+    elseif optim_solver == "snopt"
+        xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+            lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+            options=sn_options, outputfile=true, lencw=5000, iSumm=6,
+        )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+    else 
+        error("optim_solver needs to be ipopt or snopt")
+    end
 
     if Info == :Solve_Succeeded
         vec = vcat(fixed_tof, xopt[7], xopt)

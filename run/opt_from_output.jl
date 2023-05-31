@@ -32,6 +32,15 @@ ip_options = Dict(
     "acceptable_constr_viol_tol" => 1e-4
 )
 
+sn_options = Dict(
+    "Major feasibility tolerance" => 1.e-6,
+    "Major optimality tolerance"  => 1.e-6,
+    "Minor feasibility tolerance" => 1.e-6,
+    "Major iterations limit" => 1000,
+    "Major print level" => 1,
+    # "printfile" => "snopt_print.out",
+)
+
 # arc design (1 or 2 or 3)
 arc_design = 2
 
@@ -72,8 +81,8 @@ res = eval_sft(x0)
 
 # inital guess
 xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
-    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-    options=ip_options, outputfile=true, 
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+    options=sn_options, outputfile=true, 
 )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
@@ -110,7 +119,3 @@ println("Now, using the initial guess, we reoptimize...")
 #     end
 # end
 
-
-
-# function interpolatecolor(cs, val, minval, maxval)
-#     i_val = 255*(val - minval)/(maxval-minval)
