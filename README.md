@@ -12,7 +12,7 @@ The functionality of SNOPT is confirmed by using a slightly modified version of 
 The environment/setup used here is as follows:
 
 - OS: WSL (Ubuntu), windows 11 
-- Assigning the environmental variables in zsh file worked as follows: 
+- Assigning the environmental variables in zsh file worked as follows: `SNOPT_SO` might not be used in `joptimise.jl` in a current version...?
 ```
 export SNOPT_LICENSE="$HOME/path-to/snopt7.lic"
 export SNOPT_SO="$HOME/path-to/libsnopt7/libsnopt7.so"
