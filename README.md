@@ -12,6 +12,11 @@ The functionality of SNOPT is confirmed by using a slightly modified version of 
 The environment/setup used here is as follows:
 
 - OS: WSL (Ubuntu), windows 11 
+- Assigning the environmental variables in zsh file worked as follows: 
+```
+export SNOPT_LICENSE="$HOME/path-to/snopt7.lic"
+export SNOPT_SO="$HOME/path-to/libsnopt7/libsnopt7.so"
+```
 - Use the **Fortran/C/C++** libraries but not **Fortran/C** libraries; the [download page](https://ccom.ucsd.edu/~optimizers/downloads/software/academic/?id=8c697396914c) of SNOPT mentions that Linux needs C++ files, suffixed with "XXX_cpp".
 
 Few tips:
