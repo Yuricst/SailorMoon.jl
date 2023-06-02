@@ -110,6 +110,8 @@ row = df[10,:]
             global xopt 
 
             # transfer the TOF (fixed value)
+            \
+            
             fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
 
             # change the value a little bit... 
@@ -131,7 +133,7 @@ row = df[10,:]
             else 
                 error("optim_solver needs to be ipopt or snopt")
             end
-            
+
             if Info == :Solve_Succeeded
                 sol_vec = vcat(fixed_tof, xopt[7], xopt)
                 CSV.write(output_fname,  Tables.table(transpose(sol_vec)), writeheader=false, append=true)
