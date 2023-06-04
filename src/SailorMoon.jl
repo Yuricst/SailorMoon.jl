@@ -30,6 +30,6 @@ include("integrator.jl")
 include("multiple-shooting.jl")
 include("fitness.jl")
 include("ig_and_bounds.jl")
-
+include("newton_method.jl")
 
 end # module
