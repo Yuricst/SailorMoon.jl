@@ -69,7 +69,7 @@ function differential_correction(x0, fitness::Function, max_iter::Int=20, ctol::
 		x_iter = newton_update(x_iter, f_iter, DF)
 
 		println("iter #", i)
-		println("|f|_inf = ", f_iter)
+		println(f_iter)
 
 	end
 	return xs, fs, converged
