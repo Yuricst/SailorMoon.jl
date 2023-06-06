@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0525_EMrotThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0606_EMrotThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -203,8 +203,8 @@ end
     ## Grid search parameters: CHANGE HERE
     n = 60
     m = 300
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755]    #[180/180*pi]  # [3.35103216382911]  
-    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    # [2.72271363311115]
+    ϕ_vec    = 0.397935069  #    LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    # [2.72271363311115]
+    θs_vec   = 3.351032164  #    LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755]    #[180/180*pi]  # [3.35103216382911]  
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -273,7 +273,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=false);
+            save_everystep=true);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
@@ -398,8 +398,9 @@ for (i,sol) in enumerate(sim)
                     for (i, x) in enumerate(sol.u)
                         println(x)
                         t = sol.t[i]
-                        println("prilune cond: ", perilune_cond(x, t, pi - θsf))
                         k = perilune_cond(x, t, pi - θsf)
+
+                        println("prilune cond: ", k)
                         if  -5e-2 < k && k < 0 
                             global lfb_count += 1
                         end
@@ -441,7 +442,6 @@ for (i,sol) in enumerate(sim)
                     if cross(x_unit, vec)[3] <= 0
                         α = -α
                     end
-
 
                     ϕ0  = grids[i][1]
                     ϵr  = grids[i][2]
