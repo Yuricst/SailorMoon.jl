@@ -8,7 +8,6 @@ using Printf
 using JSON
 using CSV
 using DataFrames
-using LaTeXStrings
 using BenchmarkTools
 
 include("../../julia-r3bp/R3BP/src/R3BP.jl")
@@ -42,5 +41,5 @@ row = df[21,:]
 x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
 fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
 
-xs, fs, converged = SailorMoon.differential_correction(x0, eval_sft)
+xs, fs, converged = SailorMoon.differential_correction2(x0, eval_sft)
 
