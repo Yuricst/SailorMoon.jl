@@ -86,6 +86,8 @@ xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
 vec = vcat(fixed_tof, xopt[7], xopt)
+
+
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
 

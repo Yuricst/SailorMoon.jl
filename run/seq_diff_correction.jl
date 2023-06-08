@@ -28,9 +28,11 @@ optim_solver = "ipopt"
 ip_options = Dict(
     "max_iter" => 100,   # 1500 ~ 2500
     "tol" => 1e-4,
+    "constr_viol_tol" => 1e-6,
+    "dual_inf_tol" => 1e-1,
     "output_file" => "ELET_ipopt.out",
     "mu_strategy" => "adaptive",
-    "acceptable_constr_viol_tol" => 1e-4
+    "acceptable_constr_viol_tol" => 1e-4,
 )
 
 sn_options = Dict(
@@ -59,7 +61,7 @@ height = size(df,1)
 
 # for (m, row) in enumerate( eachrow( df ) ) 
 
-row = df[21,:]
+row = df[20,:]
 
     # perform the differential correction only if there is no flyby
     if row.lfb == 0   
@@ -145,7 +147,7 @@ row = df[21,:]
     #     end
     
     else
-        # println("candidate #", m, "/", height,  " not meeting the condition.")
+        println("candidate not meeting the condition.")
     end
 
 # end

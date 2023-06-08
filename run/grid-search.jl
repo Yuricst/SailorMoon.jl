@@ -128,7 +128,7 @@ using Distributed
     end
 
     function perilune_cond(u,t,int)
-        if abs(t) > 1
+        # if abs(t) > 1
             if isa(int, AbstractFloat)
                 θmLPO = int
             else
@@ -150,10 +150,10 @@ using Distributed
             # end
 
             # check when the SC passes the boundary of the lunar SOI
-            return r - moon_soi  
-        else 
-            return NaN
-        end
+            return moon_soi - r
+        # else 
+            # return NaN
+        # end
         
     end
 
@@ -211,33 +211,69 @@ end
 
     ## make initial conditions 
     grids = []
-    for ϕ0 in ϕ_vec
-        for ϵr in epsr_vec
-            for ϵv in epsv_vec
-                for θsf in θs_vec
+
+    # for ϕ0 in ϕ_vec
+    #     for ϵr in epsr_vec
+    #         for ϵv in epsv_vec
+    #             for θsf in θs_vec
                     
-                    # arrival LPO object
-                    LPOArrival = SailorMoon.CR3BPLPO2(
-                        res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
-                    );
+    #                 # arrival LPO object
+    #                 LPOArrival = SailorMoon.CR3BPLPO2(
+    #                     res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
+    #                 );
                     
-                    xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
-                    # in Sun-B1 frame
-                    xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
+    #                 xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
+    #                 # in Sun-B1 frame
+    #                 xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
                     
-                    # println("xf_sb1: ", xf_sb1)
-                    push!(grids, [ϕ0, ϵr, ϵv, θsf, xf_sb1])
+    #                 # println("xf_sb1: ", xf_sb1)
+    #                 push!(grids, [ϕ0, ϵr, ϵv, θsf, xf_sb1])
                     
-                end
-            end
-        end
+    #             end
+    #         end
+    #     end
+    # end
+
+
+
+    # a bit of cheating... re-filtering the existing file 
+    filename = "data/grid_search_Tsit5_0525_EMrotThrust.csv"
+    df = DataFrame(CSV.File(filename))
+    ϕ_vec  = df.phi0
+    θs_vec = df.thetasf
+    epsr_vec = 10.0 .^(-5)
+    epsv_vec = 10.0 .^(-5)
+    tof_bck  = 120 * 86400 / param3b.tstar
+
+    for i in collect(1:1:length(ϕ_vec))
+        ϕ0  = ϕ_vec[i]
+        θsf = θs_vec[i]
+        # arrival LPO object
+        LPOArrival = SailorMoon.CR3BPLPO2(
+            res.x0, res.period, ys0, prob_cr3bp_stm, epsr_vec, epsv_vec, Tsit5(), 1e-12, 1e-12, 0.005
+        );
+        
+        xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
+        # in Sun-B1 frame
+        xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
+        
+        # println("xf_sb1: ", xf_sb1)
+        push!(grids, [ϕ0, epsr_vec, epsv_vec, θsf, xf_sb1])
+    
     end
+
+
+
 end
+
+
 
 ## initialize problem 
 
 # include callback functions 
 @everywhere begin
+    # affect!: upcrossing (neg->pos), affect_neg: downcrossing (pos->neg)
+
     # terminate_cb = ContinuousCallback(terminate_condition, terminate_affect!; rootfind=false)
     apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
     # periapsis_cb = ContinuousCallback(periapsis_LEO_cond, terminate_affect!)
@@ -273,7 +309,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=true);
+            save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
@@ -393,15 +429,19 @@ for (i,sol) in enumerate(sim)
                     #     end    
                     # end
 
+                    global t_lfb0 = 100  
+
                     # FIXME: lunar radius count not accurate (05/25/2023)
                     # another way to count lunar flyby and lunar radius crossing 
                     for (i, x) in enumerate(sol.u)
-                        println(x)
                         t = sol.t[i]
                         k = perilune_cond(x, t, pi - θsf)
 
-                        println("prilune cond: ", k)
-                        if  -5e-2 < k && k < 0 
+                        ### HERE, JUST ADD A FEW LINE TO FLAG IF r < lunar SMA && t < TBD. 
+                        ### Then we can discard these solutions anyways so do not need to take care of the lfb # 
+
+                        println("prilune cond: ", k, " , t = ", t)
+                        if  abs(k) < 5e-2 
                             global lfb_count += 1
                         end
 
@@ -410,12 +450,12 @@ for (i,sol) in enumerate(sim)
                         #     global lradius_cross += 1
                         # end
                     end
-                    
+
+                    # if the first flyby happened before t = 5, that is a red flag... 
                     # check the first periapsis and see if it's in the LEO range...
                     r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
                     id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
                     id_lunar_rad = id_lunar_rad[2]
-                    # println("id_lunar_rad: ", id_lunar_rad)
                     x_l    = sol.u[id_lunar_rad][1]
                     y_l    = sol.u[id_lunar_rad][2]
                     z_l    = sol.u[id_lunar_rad][3]
@@ -463,7 +503,7 @@ for (i,sol) in enumerate(sim)
                     m_rp = sol.u[end][7]
 
                     # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
+                    # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
 
                     push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
                             rp_kep, ra_kep, α, 
@@ -476,9 +516,10 @@ for (i,sol) in enumerate(sim)
                     println("idx $i is a success!")
 
                     color = color_gradation[round(-sol.t[end])]
-                    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
+                    # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
 
                     global id += 1
+
                 end
             end
         end
