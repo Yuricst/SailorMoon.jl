@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0609_NoThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0609_SunThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -39,7 +39,7 @@ using Distributed
     )
 
     # dv_fun = SailorMoon.dv_EMrotdir_sb1frame
-    dv_fun = SailorMoon.dv_no_thrust
+    dv_fun = SailorMoon.dv_sun_dir_sb1frame
 
     if dv_fun == SailorMoon.dv_no_thrust
         tmax = 0.0
