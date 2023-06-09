@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0606_EMrotThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0609_NoThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -38,14 +38,13 @@ using Distributed
         mdot_si, mstar, param3b.tstar
     )
 
-    dv_fun = SailorMoon.dv_EMrotdir_sb1frame
+    # dv_fun = SailorMoon.dv_EMrotdir_sb1frame
+    dv_fun = SailorMoon.dv_no_thrust
 
     if dv_fun == SailorMoon.dv_no_thrust
         tmax = 0.0
         mdot = 0.0 
     end 
-
-    alpha = 
 
     #### CALLBACK FUNCTIONS #################
     # store the apoapsis value
@@ -66,14 +65,12 @@ using Distributed
     function periapsis_LEO_cond(u,t,int)
 
         ub = earth_leo_ub 
-        
         r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  
         val = NaN 
 
         if r < ub
             θmLPO = int.p[4]
             θm = θmLPO + param3b.oml * t
-            # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
 
             r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
             v_sc = u[4:6]
@@ -94,7 +91,6 @@ using Distributed
 
             θmLPO = int.p[4]
             θm = θmLPO + param3b.oml * t
-            # r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
 
             r_sc_earth = [u[1] - param3b.as - (-param3b.mu2 * cos(θm)), u[2] - (-param3b.mu2 * sin(θm)), u[3]]
             v_sc = u[4:6]
@@ -113,7 +109,6 @@ using Distributed
         else
             θmLPO = int.p[4]
         end
-
         θm  = θmLPO + param3b.oml * t
         
         # moon-SC distance
@@ -132,12 +127,10 @@ using Distributed
     # count the lunar radius crossing but not flyby
     function lunar_radius_cond2(u,t,int)
         
-        # moon-SC distance
-        r = norm(u[1:3] - [param3b.as, 0, 0])
-
         # pick up if SC get closer to the lunar SMA in S-B1 frame (consider the SOI of the moon 
         # so that we can avoid the integration "skipping" the r < lunar raidus domain)
         if abs(t) < 5  
+            r = norm(u[1:3] - [param3b.as, 0, 0])
             return r - param3b.mu1 - (66100 / 4 / param3b.lstar)
         else
             return NaN
@@ -184,9 +177,26 @@ using Distributed
         return r - 12000 / param3b.lstar
     end
 
+    function switch2ballistic_cond(u,t,int)
+        if abs(t) > 8 
+            r = norm(u[1:3] - [param3b.as, 0, 0])
+            return r - param3b.mu1
+        else 
+            return NaN 
+        end
+    end
+
     # affect!
     terminate_affect!(int) = terminate!(int)
     no_affect!(int) = NaN
+
+    function turn_off_engine_affect!(int)
+        int.p[7]  = 0.0
+        int.p[10] = 0.0
+        int.p[11] = 0.0
+        
+        # println(" engine turned off at t=", int.t)
+    end
 
     function plot_circle(radius, x, y, m=50)
         circle = zeros(2,m)
@@ -219,71 +229,65 @@ end
     monodromy = R3BP.get_stm(sol, 6)   # get monodromy matrix
     ys0 = R3BP.get_eigenvector(monodromy, true, 1) # monodromy eigenvector
 
-    ## Grid search parameters: CHANGE HERE
+    ### Grid search parameters
+    ### OPTION 1; grid generations
     n = 60
     m = 300
-    # ϕ_vec    = 1.549852376	#    LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    # [2.72271363311115]
-    # θs_vec   = 4.398229715  #    LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755]    #[180/180*pi]  # [3.35103216382911]  
-    # epsr_vec = 10.0 .^(-5)
-    # epsv_vec = 10.0 .^(-5)
-    # tof_bck  = 120 * 86400 / param3b.tstar
-
-    ## make initial conditions 
-    grids = []
-
-    # for ϕ0 in ϕ_vec
-    #     for ϵr in epsr_vec
-    #         for ϵv in epsv_vec
-    #             for θsf in θs_vec
-                    
-    #                 # arrival LPO object
-    #                 LPOArrival = SailorMoon.CR3BPLPO2(
-    #                     res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
-    #                 );
-                    
-    #                 xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
-    #                 # in Sun-B1 frame
-    #                 xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
-                    
-    #                 # println("xf_sb1: ", xf_sb1)
-    #                 push!(grids, [ϕ0, ϵr, ϵv, θsf, xf_sb1])
-                    
-    #             end
-    #         end
-    #     end
-    # end
-
-    # a bit of cheating... re-filtering the existing file 
-    filename = "data/grid_search_Tsit5_0525_EMrotThrust.csv"
-    df = DataFrame(CSV.File(filename))
-    ϕ_vec    = df.phi0
-    θs_vec   = df.thetasf
+    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
 
-    for i in collect(1:1:length(ϕ_vec))
-        ϕ0  = ϕ_vec[i]
-        θsf = θs_vec[i]
-        # arrival LPO object
-        LPOArrival = SailorMoon.CR3BPLPO2(
-            res.x0, res.period, ys0, prob_cr3bp_stm, epsr_vec, epsv_vec, Tsit5(), 1e-12, 1e-12, 0.005
-        );
-        
-        xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
-        # in Sun-B1 frame
-        xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
-        
-        # println("xf_sb1: ", xf_sb1)
-        push!(grids, [ϕ0, epsr_vec, epsv_vec, θsf, xf_sb1])
-    
+    grids = []
+    for ϕ0 in ϕ_vec
+        for ϵr in epsr_vec
+            for ϵv in epsv_vec
+                for θsf in θs_vec
+                    
+                    # arrival LPO object
+                    LPOArrival = SailorMoon.CR3BPLPO2(
+                        res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
+                    );
+                    
+                    xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
+                    # in Sun-B1 frame
+                    xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)
+                    
+                    # println("xf_sb1: ", xf_sb1)
+                    push!(grids, [ϕ0, ϵr, ϵv, θsf, xf_sb1])
+                    
+                end
+            end
+        end
     end
+
+    ### OPTION 2;  a bit of cheating... re-filtering the existing file 
+    # filename = "data/grid_search_Tsit5_0525_EMrotThrust.csv"
+    # df = DataFrame(CSV.File(filename))
+    # ϕ_vec    = df.phi0
+    # θs_vec   = df.thetasf
+    # epsr_vec = 10.0 .^(-5)
+    # epsv_vec = 10.0 .^(-5)
+    # tof_bck  = 120 * 86400 / param3b.tstar
+    # grids = []
+
+    # for i in collect(1:1:length(ϕ_vec))
+    #     ϕ0  = ϕ_vec[i]
+    #     θsf = θs_vec[i]
+    #     # arrival LPO object
+    #     LPOArrival = SailorMoon.CR3BPLPO2(
+    #         res.x0, res.period, ys0, prob_cr3bp_stm, epsr_vec, epsv_vec, Tsit5(), 1e-12, 1e-12, 0.005
+    #     );
+        
+    #     xf = SailorMoon.set_terminal_state2(ϕ0, pi-θsf, param3b, LPOArrival)
+    #     xf_sb1 = vcat(SailorMoon.transform_EMrot_to_SunB1(xf, pi-θsf, param3b.oml, param3b.as), 1.0)  # in Sun-B1 frame
+    #     push!(grids, [ϕ0, epsr_vec, epsv_vec, θsf, xf_sb1])
+    
+    # end
 
 end
 
-
-
-## initialize problem 
 
 # include callback functions 
 @everywhere begin
@@ -298,8 +302,9 @@ end
     perilune_cb  = ContinuousCallback(perilune_cond, nothing, no_affect!; rootfind=false, save_positions=(true,false))
     # lunar_rad_cb = ContinuousCallback(lunar_radius_cond, nothing, no_affect!; rootfind=false, save_positions=(false, true))
     lunar_rad_cb = ContinuousCallback(lunar_radius_cond2, nothing, no_affect!; rootfind=false, save_positions=(true, false))
+    ballistic_cond = ContinuousCallback(switch2ballistic_cond, nothing, turn_off_engine_affect!; rootfind=false, save_positions=(true, false))
 
-    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb)
+    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cond)
 
     svf_ = zeros(Float64, 1, 7)
     tspan = [0, -tof_bck]
@@ -311,8 +316,6 @@ end
     # SB1rot EOM
     params = [param3b.mu2, param3b.mus, param3b.as, pi, param3b.oml, param3b.omb, 1.0, 0.0, 0.0, 0.0, 0.0, dv_fun, param3b.tstar]
     prob = ODEProblem(SailorMoon.rhs_bcr4bp_sb1frame2_thrust_bal!, svf_, tspan, params)
-
-    # sol_bck = solve(prob_bck, Tsit5(), reltol=1e-12, abstol=1e-12);
 
     ## make ensemble problems
     function prob_func(prob, i, repeat)
@@ -341,7 +344,7 @@ cmap = :viridis
 # make dataframe
 entries = [
     "id", "phi0", "epsr", "epsv", "thetasf",
-    "rp_kep", "ra_kep", "alpha",  # important guys
+    "rp_kep", "ra_kep", "alpha", 
     "ra", "dt1", "dt2",
     "x_lpo", "y_lpo", "z_lpo", "xdot_lpo", "ydot_lpo", "zdot_lpo", "m_lpo",
     "x_ra", "y_ra", "z_ra", "xdot_ra", "ydot_ra", "zdot_ra", "m_ra",
@@ -416,7 +419,7 @@ for (i,sol) in enumerate(sim)
                     #             .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(θmf .+ param3b.oml .* sol.t)).^2
                     #             .+  hcat(sol.u...)[3,:].^2)
                     
-                    # relative to origin
+                    # relative to B1 
                     r_vec = sqrt.((hcat(sol.u...)[1,:] .- [param3b.as]).^2
                                 .+ hcat(sol.u...)[2,:].^2
                                 .+ hcat(sol.u...)[3,:].^2)
@@ -425,13 +428,13 @@ for (i,sol) in enumerate(sim)
                     dt_ra = - sol.t[id_ra]
                     dt_rp = tof_tot - dt_ra 
 
-                    x_ra = sol.u[id_ra][1]
-                    y_ra = sol.u[id_ra][2]
-                    z_ra = sol.u[id_ra][3]
+                    x_ra    = sol.u[id_ra][1]
+                    y_ra    = sol.u[id_ra][2]
+                    z_ra    = sol.u[id_ra][3]
                     xdot_ra = sol.u[id_ra][4]
                     ydot_ra = sol.u[id_ra][5]
                     zdot_ra = sol.u[id_ra][6]
-                    m_ra = sol.u[id_ra][7]                   
+                    m_ra    = sol.u[id_ra][7]                   
 
                     # # flag: lunar flyby? (cf. moon SOI = 66100 km)
                     # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
@@ -448,36 +451,28 @@ for (i,sol) in enumerate(sim)
                     # end
 
 
-                    # FIXME: lunar radius count not accurate (05/25/2023)
-                    # another way to count lunar flyby and lunar radius crossing 
                     for (i, x) in enumerate(sol.u)
                         t = sol.t[i]
                         c1 = perilune_cond(x, t, pi-θsf)
                         c2 = lunar_radius_cond2(x, t, pi-θsf)
                         
-                        println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
+                        # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
                         if  abs(c1) < 5e-2 
                             global lfb_count += 1
                         end
 
                         if abs(c2) < 3e-2
-                            println("watch out, lunar flyby is happening too early... ")
+                            # println("watch out, lunar flyby is happening too early... ")
                             global flag = true 
                         end 
 
-                        # println("lunar radius cond: ", lunar_radius_cond(x, t, pi - θsf))
-                        # if lunar_radius_cond(x, t, pi - θsf) < 0.05
-                        #     global lradius_cross += 1
-                        # end
                     end
 
                     if flag == false 
 
-                        # if the first flyby happened before t = 5, that is a red flag... 
-                        # check the first periapsis and see if it's in the LEO range...
                         r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
-                        id_lunar_rad = findmin(abs.(r_vec .- param3b.mu1))
-                        id_lunar_rad = id_lunar_rad[2]
+                        id_lunar_rad   = findmin(abs.(r_vec .- param3b.mu1))
+                        id_lunar_rad   = id_lunar_rad[2]
                         x_l    = sol.u[id_lunar_rad][1]
                         y_l    = sol.u[id_lunar_rad][2]
                         z_l    = sol.u[id_lunar_rad][3]
@@ -538,7 +533,7 @@ for (i,sol) in enumerate(sim)
                         println("idx $i is a success!")
 
                         color = color_gradation[round(-sol.t[end])]
-                        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
+                        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
 
                         global id += 1
                     
