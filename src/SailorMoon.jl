@@ -15,7 +15,7 @@ import DiffResults
 import FiniteDiff
 import AstrodynamicsBase
 
-
+include("plot_func.jl")
 include("lpo/build_lpo.jl")
 include("integrator.jl")
 include("dynamics.jl")

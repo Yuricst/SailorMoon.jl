@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0609_antiEMrotThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0611_antivelThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -39,7 +39,7 @@ using Distributed
     )
 
     # dv_fun = SailorMoon.dv_EMrotdir_sb1frame
-    dv_fun = SailorMoon.dv_antiEMrotdir_sb1frame
+    dv_fun = SailorMoon.dv_anti_vel_sb1frame
 
     if dv_fun == SailorMoon.dv_no_thrust
         tmax = 0.0
@@ -169,14 +169,6 @@ using Distributed
         
     end
 
-    # terminate if the SC is sufficiently close to the earth
-    function proximity_earth_cond(u,t,int)
-        θm0 = int.p[4]
-        θm = θm0 + param3b.oml * t
-        r = sqrt((u[1] - param3b.as - (-param3b.mu2 * cos(θm)))^2 + (u[2] - (-param3b.mu2 * sin(θm))) ^2 + u[3]^2)  # SC-earth distance
-        return r - 12000 / param3b.lstar
-    end
-
     function switch2ballistic_cond(u,t,int)
         if abs(t) > 8 
             r = norm(u[1:3] - [param3b.as, 0, 0])
@@ -186,27 +178,30 @@ using Distributed
         end
     end
 
-    # affect!
+    # switch on the engine after escaping from the "invariant manifold"
+    function wbs_boundary_cond(u,t,int)
+        coast_time = 10 * (24*60*60) / param3b.tstar
+        return abs(t) - coast_time
+    end 
+
+    ### affect!
     terminate_affect!(int) = terminate!(int)
     no_affect!(int) = NaN
 
     function turn_off_engine_affect!(int)
-        int.p[7]  = 0.0
-        int.p[10] = 0.0
-        int.p[11] = 0.0
-        
+        int.p[7]  = 0.0    # τ
+        int.p[10] = 0.0    # mdot
+        int.p[11] = 0.0    # tmax
         # println(" engine turned off at t=", int.t)
     end
 
-    function plot_circle(radius, x, y, m=50)
-        circle = zeros(2,m)
-        thetas = LinRange(0.0, 2π, m)
-        for i = 1:m
-            circle[1,i] = radius*cos(thetas[i]) + x
-            circle[2,i] = radius*sin(thetas[i]) + y
-        end
-        return circle
+    function turn_on_engine_affect!(int)
+        int.p[7]  = 1.0     # τ
+        int.p[10] = mdot    # mdot
+        int.p[11] = tmax    # tmax
+        # println(" engine turned on at t=", int.t)
     end
+
 end
 
 @everywhere begin
@@ -233,8 +228,8 @@ end
     ### OPTION 1; grid generations
     n = 60
     m = 300
-    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
+    ϕ_vec    = 0.272271363311115  # LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
+    θs_vec   = 0                  # LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -291,20 +286,19 @@ end
 
 # include callback functions 
 @everywhere begin
-    # affect!: upcrossing (neg->pos), affect_neg: downcrossing (pos->neg)
+    ## affect!: upcrossing (neg->pos), affect_neg: downcrossing (pos->neg)
 
-    # terminate_cb = ContinuousCallback(terminate_condition, terminate_affect!; rootfind=false)
-    apoapsis_cb  = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
+    apoapsis_cb    = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
     # periapsis_cb = ContinuousCallback(periapsis_LEO_cond, terminate_affect!)
-    periapsis_cb = ContinuousCallback(periapsis_cond, terminate_affect!)
+    periapsis_cb   = ContinuousCallback(periapsis_cond, terminate_affect!)
     # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
-    # proximity_earth_cb = ContinuousCallback(proximity_earth_cond, terminate_affect!)
-    perilune_cb  = ContinuousCallback(perilune_cond, nothing, no_affect!; rootfind=false, save_positions=(true,false))
+    perilune_cb    = ContinuousCallback(perilune_cond, nothing, no_affect!; rootfind=false, save_positions=(true,false))
     # lunar_rad_cb = ContinuousCallback(lunar_radius_cond, nothing, no_affect!; rootfind=false, save_positions=(false, true))
-    lunar_rad_cb = ContinuousCallback(lunar_radius_cond2, nothing, no_affect!; rootfind=false, save_positions=(true, false))
-    ballistic_cond = ContinuousCallback(switch2ballistic_cond, nothing, turn_off_engine_affect!; rootfind=false, save_positions=(true, false))
+    lunar_rad_cb   = ContinuousCallback(lunar_radius_cond2, nothing, no_affect!; rootfind=false, save_positions=(true, false))
+    ballistic_cb   = ContinuousCallback(switch2ballistic_cond, nothing, turn_off_engine_affect!; rootfind=false, save_positions=(true, false))
+    # wbs_cb         = ContinuousCallback(wbs_boundary_cond, turn_on_engine_affect!; rootfind=false, save_positions=(false,false))
 
-    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cond)
+    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cb)  # wbs_cb
 
     svf_ = zeros(Float64, 1, 7)
     tspan = [0, -tof_bck]
@@ -321,6 +315,7 @@ end
     function prob_func(prob, i, repeat)
         print("\rproblem # $i")
         remake(prob, u0=grids[i][5], p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 1.0, 0.0, 0.0, mdot, tmax, dv_fun, param3b.tstar])
+        # remake(prob, u0=grids[i][5], p=[param3b.mu2, param3b.mus, param3b.as, pi - grids[i][4], param3b.oml, param3b.omb, 0.0, 0.0, 0.0, 0.0, 0.0, dv_fun, param3b.tstar])
     end
 end
 
@@ -456,7 +451,7 @@ for (i,sol) in enumerate(sim)
                         c1 = perilune_cond(x, t, pi-θsf)
                         c2 = lunar_radius_cond2(x, t, pi-θsf)
                         
-                        # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
+                        println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
                         if  abs(c1) < 5e-2 
                             global lfb_count += 1
                         end
@@ -538,14 +533,17 @@ for (i,sol) in enumerate(sim)
                         global id += 1
                     
                     end
+
                 end
             end
         end
+        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
+
     end
 end
 
 scatter!(ptraj, [param3b.as], [0.0], label="")  # roughly earth
-circle = plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
+circle = SailorMoon.plot_circle(1-param3b.mu2, param3b.as, 0.0)  # moon
 plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 

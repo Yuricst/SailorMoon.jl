@@ -363,7 +363,7 @@ function rhs_bcr4bp_sb1frame2_thrust!(du,u,p,t)
     θ = θ0 + ωM * t  # moon angle
 
     # create Thrust term
-    dir_v = dv_fun(μS, as, θ, u[1:6], [τ, γ, β]) 
+    dir_v = dv_fun(μS, as, θ, ωM, u[1:6], [τ, γ, β]) 
     Tx, Ty, Tz = dir_v * tmax / u[7]  # mdot
     # println(T)
 
@@ -415,17 +415,18 @@ function rhs_bcr4bp_sb1frame2_thrust_bal!(du,u,p,t)
 
     θ = θ0 + ωM * t  # moon angle
 
+    # 10 days 
     t_ballistic = 10 * 24*60*60 / tstar
     # create Thrust term
     if abs(t) < t_ballistic
         dir_v = [0.0, 0.0, 0.0]
         mdot = 0.0
-        
+
         Tx = 0.0
         Ty = 0.0
         Tz = 0.0
     else 
-        dir_v = dv_fun(μS, as, θ, u[1:6], [τ, γ, β]) 
+        dir_v = dv_fun(μS, as, θ, ωM, u[1:6], [τ, γ, β]) 
         Tx, Ty, Tz = dir_v * tmax / u[7]  # mdot
     end
 
@@ -548,7 +549,7 @@ function rhs_bcr4bp_emframe_thrust!(du,u,p,t)
     r3 = sqrt( (x-xs)^2 + (y-ys)^2 + (z-zs)^2 )
 
     # compute delta-V vector
-    dir_v = dv_fun(μ_3, a_s, θ, u[1:6], [τ, γ, β])
+    dir_v = dv_fun(μS, as, θ, ωM, u[1:6], [τ, γ, β]) 
     ts = tmax*dir_v
 
     # position-state derivative

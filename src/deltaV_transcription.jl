@@ -1,15 +1,20 @@
 """
 Delta-V transcriptions
-"""
 
+INPUT 
+    μS          Sun GM (normalized)
+    as          Sun-B1 distance (normalized)
+    θ           moon angle (in SB1 rotating frame)
+    state0      state vector [x,y,z,vx,vy,vz] (do not include mass)
+    p           control parameter [τ, γ, β]
+"""
 
 """
 dummy function for the no thrust mode
 """
-function dv_no_thrust(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
+function dv_no_thrust(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
     return [0.0, 0.0, 0.0]
 end
-
 
 """
     dv_sun_dir_angles(μS::Real, as::Real, θ::Real, state0::Vector, control::Vector)
@@ -17,7 +22,7 @@ end
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 Frame: Sun-B1 rotating frame. origin = E-M barycenter (B1) 
 """
-function dv_sun_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_sun_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
     b2 = [-μS/(μS+1)*as, 0, 0]
@@ -53,7 +58,7 @@ end
 Construct delta-V vector, directing along with tidal force vector in the Sun-B1 frame
 Frame: Sun-B1 rotating frame. origin = B1 (E-M barycenter)
 """
-function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
     # sun-B1 direction unit vector
     r = [-as, 0, 0]
@@ -84,15 +89,11 @@ function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::V
 end
 
 
-
-
 """
-    Earth-Moon rotating direction 
-    According to Scheuerle et al. (2023 AAS), thrusting in the Earth-Moon rotating direction (i.e., tangential direction to the B1->SC vector)
-    is the optimal in order to enhance the Earth-Moon instantaneous Jacobi constant. 
+    Earth-Moon rotating direction in SB1 rot frame
     Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun 
 """
-function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
     # vector B1 -> SC 
@@ -130,12 +131,10 @@ end
 
 
 """
-    Earth-Moon rotating direction 
-    According to Scheuerle et al. (2023 AAS), thrusting in the Earth-Moon rotating direction (i.e., tangential direction to the B1->SC vector)
-    is the optimal in order to enhance the Earth-Moon instantaneous Jacobi constant. 
+    Anti Earth-Moon rotating direction in SB1 rot. frame
     Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun 
 """
-function dv_antiEMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_antiEMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
     # vector B1 -> SC 
@@ -172,8 +171,41 @@ function dv_antiEMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, state0
 end
 
 
+"""
+    anti-Earth-Moon rotating direction in EM rot. frame
+    According to Scheuerle et al. (2023 AAS), thrusting in the anti-Earth-Moon rotating direction 
+    in CR3BP scenario (i.e., EMrot frame) is the optimal in order to enhance the Earth-Moon instantaneous 
+    Jacobi constant. This is the implementation of his idea. 
+    However,  we are propagating the dynamics in SB1 frame so we need to rotate the coordination at every timestep.
+    Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun. 
+"""
+function dv_anti_vel_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+    dir  = - state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    # rot about y-axis 
+    rot1 = [
+        cos_β  0 sin_β
+        0      1 0
+        -sin_β 0 cos_β
+    ]
+
+    # rot about z-axis 
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ  0
+        0     0      1
+    ]
+
+    return τ * rot1 * rot2 * dir 
 
 
+
+
+end
 
 
 ### ====== NOT IN USE (06/09/2023) ==============================================================
