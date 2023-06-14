@@ -135,7 +135,7 @@ function grid_perigees_sols(θsfs, ϕ0)
         push!(sols, _sol)
         push!(perigees, _perigee)
     end
-    return sols, _perigees
+    return sols, perigees
 end
 
 # 1. run to get perigee ----------------------------------------------------- #
@@ -170,6 +170,8 @@ for idx = 1:length(θsf_interest)
     θsfs_refined = LinRange(θsf - dθs, θsf + dθs, n_refined)
     _sols_refined, _perigees_refined = grid_perigees_sols(θsfs_refined, ϕ0)
     # storage 
+    println("length(θsfs_refined) = ", length(θsfs_refined))
+    println("length(_perigees_refined) = ", length(_perigees_refined))
     push!(refined_sols_perigees, [θsfs_refined, _sols_refined, _perigees_refined])
 end
 
