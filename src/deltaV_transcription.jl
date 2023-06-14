@@ -179,7 +179,9 @@ end
     However,  we are propagating the dynamics in SB1 frame so we need to rotate the coordination at every timestep.
     Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun. 
 """
-function dv_anti_vel_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_anti_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+    τ, γ, β = p[1], p[2], p[3]
+
     dir  = - state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
     sin_β = sin(β)
     cos_β = cos(β)
@@ -201,10 +203,33 @@ function dv_anti_vel_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float
     ]
 
     return τ * rot1 * rot2 * dir 
+end
 
 
+function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+    τ, γ, β = p[1], p[2], p[3]
 
+    dir  = state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    # rot about y-axis 
+    rot1 = [
+        cos_β  0 sin_β
+        0      1 0
+        -sin_β 0 cos_β
+    ]
 
+    # rot about z-axis 
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ  0
+        0     0      1
+    ]
+
+    return τ * rot1 * rot2 * dir 
 end
 
 
@@ -300,7 +325,7 @@ end
 
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 """
-function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_sun_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0, p::Vector{Float64})
     # sun-b1 distance vector
     τ = p[1]
     rs = [as * cos(θ), as * sin(θ), 0]
@@ -336,7 +361,7 @@ end
 Construct delta-V vector, directing along with tidal force vector
 """
 
-function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_tidal_dir_angles_emframe(μS::Float64, as::Float64, θ::Float64, state0, p::Vector{Float64})
     τ = p[1]
     # sun-B1 direction unit vector
     r = [-as, 0, 0]
