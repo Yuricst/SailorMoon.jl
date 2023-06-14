@@ -258,7 +258,7 @@ end
 
 for solved in solved_sols_perigees
     θsfs_solved, _, perigees_solved = solved     # unpack
-    plot!(ptrend, θsfs_solved*180/π, perigees_solved*param3b.lstar,
+    plot!(ptrend, [θsfs_solved*180/π], [perigees_solved*param3b.lstar],
         marker=:circle, color=:lime, label="Solved")
 end
 
