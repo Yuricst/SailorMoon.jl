@@ -286,8 +286,7 @@ function rhs_bcr4bp_sb1frame2!(du,u,p,t)
     # create Thrust term
 #     T = dv_inertial_angles([τ,γ,β])
     T = [0.0, 0.0, 0.0]
-    Tx, Ty, Tz = T * tmax / u[7]  # mdot
-
+    Tx, Ty, Tz = T * tmax / u[7]  
 
     # derivatives of positions
     du[1] = u[4]
@@ -311,8 +310,8 @@ function rhs_bcr4bp_sb1frame2!(du,u,p,t)
 #     println(r30, " ", r31, " ", r32)
 
     Fx = -(μS)*(x)/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
-    Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
-    Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
+    Fy = -(μS)* y /r30^3 - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)* z /r30^3 - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
 #     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
 
     du[4] =  2*ωb*vy + ωb^2*x + Fx
@@ -364,7 +363,7 @@ function rhs_bcr4bp_sb1frame2_thrust!(du,u,p,t)
 
     # create Thrust term
     dir_v = dv_fun(μS, as, θ, ωM, u[1:6], [τ, γ, β]) 
-    Tx, Ty, Tz = dir_v * tmax / u[7]  # mdot
+    Tx, Ty, Tz = dir_v * tmax / u[7]  
     # println(T)
 
     # derivatives of positions
@@ -389,8 +388,8 @@ function rhs_bcr4bp_sb1frame2_thrust!(du,u,p,t)
 #     println(r30, " ", r31, " ", r32)
 
     Fx = -(μS)*(x)/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
-    Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
-    Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
+    Fy = -(μS)* y /r30^3 - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)* z /r30^3 - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
 #     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
 
     du[4] =  2*ωb*vy + ωb^2*x + Fx
@@ -452,8 +451,8 @@ function rhs_bcr4bp_sb1frame2_thrust_bal!(du,u,p,t)
 #     println(r30, " ", r31, " ", r32)
 
     Fx = -(μS)*(x)/r30^3 - (1-μ2)*(x-xe)/r31^3 - μ2*(x-xm)/r32^3 + Tx
-    Fy = -(μS)* y /r30^3           - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
-    Fz = -(μS)* z /r30^3           - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
+    Fy = -(μS)* y /r30^3 - (1-μ2)*(y-ye)/r31^3 - μ2*(y-ym)/r32^3 + Ty
+    Fz = -(μS)* z /r30^3 - (1-μ2)*(z-ze)/r31^3 - μ2*(z-zm)/r32^3 + Tz
 #     println(-μS*(x-1/(μS+1))/r30^3 , " ", - (1-μ2)*(x-xe)/r31^3, " ",  - μ2*(x-xm)/r32^3)
 
     du[4] =  2*ωb*vy + ωb^2*x + Fx
