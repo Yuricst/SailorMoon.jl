@@ -13,8 +13,10 @@ using Printf
 using DataFrames
 using JSON
 using CSV
+
 using ProgressMeter
-using Printf 
+using Printf
+using Roots
 
 include("../src/SailorMoon.jl")
 include("../../julia-R3BP/R3BP/src/R3BP.jl")
@@ -139,7 +141,7 @@ function grid_perigees_sols(θsfs, ϕ0)
 end
 
 # 1. run to get perigee ----------------------------------------------------- #
-target_perigee = 6378 + 200   # km
+target_perigee = (6378 + 200)/param3b.lstar
 ϕ0 = deg2rad(145)  # fixed 
 
 n_θsf = 180
@@ -155,6 +157,7 @@ rp_threshold = 30000 / param3b.lstar
 global Δdir = 0.0  # initialize 
 for idx = 1:length(_perigees)-1
     if (_perigees[idx+1] - _perigees[idx])*Δdir < 0.0 && _perigees[idx] < rp_threshold
+        # detected change of sign
         push!(θsf_interest, θsfs[idx])
     end
     global Δdir = _perigees[idx+1] - _perigees[idx]
@@ -169,19 +172,58 @@ for idx = 1:length(θsf_interest)
     θsf = θsf_interest[idx]
     θsfs_refined = LinRange(θsf - dθs, θsf + dθs, n_refined)
     _sols_refined, _perigees_refined = grid_perigees_sols(θsfs_refined, ϕ0)
-    # storage 
-    println("length(θsfs_refined) = ", length(θsfs_refined))
-    println("length(_perigees_refined) = ", length(_perigees_refined))
+    # storage
     push!(refined_sols_perigees, [θsfs_refined, _sols_refined, _perigees_refined])
 end
+@printf("refined_sols_perigees = %1.0f\n", length(refined_sols_perigees))
 
-# 4. regula-falsi --------------------------------------------------------- #
+# 4. Run regula-falsi ------------------------------------------------------ #
+"""Residual function for root-solving at perigee"""
+res_func = function (θsf, get_sol=false)
+    _sol, rp = get_perigee_sol(θsf, ϕ0)
+    if get_sol 
+        return rp - target_perigee, _sol
+    else
+        return rp - target_perigee
+    end
+end
+
+@show target_perigee;
+solved_sols_perigees = []
+for ref in refined_sols_perigees
+    θsfs_refined, _, perigees_refined = ref     # unpack
+    # check through θsf 
+    check_sign = 0.0
+    for (idx,rp) in enumerate(perigees_refined[1:end-1])
+        rp_next = perigees_refined[idx+1]
+        @show (rp_next - target_perigee) 
+        @show (rp - target_perigee)
+        Δrp = (rp_next - target_perigee) - (rp - target_perigee)
+        if Δrp * check_sign < 0.0
+            # detected change of sign, solve root-solving
+            println("Run root-solving problem! θsfs_refined[idx] = ", θsfs_refined[idx]*180/π)
+            #@printf("Current rp = %1.0f, next rp = %1.0f\n", rp, rp_next)
+            # θsf_solved = find_zero(
+            #     res_func,
+            #     (θsfs_refined[idx], θsfs_refined[idx+1]),
+            #     Bisection()
+            # )
+            # _residual, solved_sol = function (θsf_solved, true)
+            # push!(
+            #     solved_sols_perigees,
+            #     [θsf_solved, solved_sol, target_perigee + _residual]
+            # )
+        end
+        check_sign = (rp_next - target_perigee) - (rp - target_perigee)
+    end
+end
+#t0_solved = find_zero(res_func, (t0s[idx], t0s[idx+1]), Bisection())
 
 
 # 5. plot results --------------------------------------------------------- #
 # plot sanity check 
 colors = palette([:blue, :orange], n_θsf)
-ptraj = plot(size=(800,600), frame_style=:box, aspect_ratio=:equal, grid_alpha=0.5, legend=false,
+ptraj = plot(size=(600,600), frame_style=:box, aspect_ratio=:equal, grid_alpha=0.5, legend=false,
     xlabel="x, LU", ylabel="y, LU")
 
 for ref in refined_sols_perigees
@@ -193,17 +235,17 @@ for ref in refined_sols_perigees
 end
 
 # plot perigee distribution
-ptrend = plot(size=(800,600), frame_style=:box, grid_alpha=0.5, legend=true,
+ptrend = plot(size=(800,600), frame_style=:box, grid_alpha=0.5, legend=:topright,
     xlabel="θsf", ylabel="Perigee, km")
 plot!(ptrend, θsfs*180/π, _perigees*param3b.lstar, marker=:circle, color=:blue, label="ELET Perigee")
 
 for ref in refined_sols_perigees
-    θsfs_refined, _, perigees_solsrefined = ref  # unpack
+    θsfs_refined, _, perigees_solsrefined = ref     # unpack
     plot!(ptrend, θsfs_refined*180/π, perigees_solsrefined*param3b.lstar,
         marker=:circle, color=:deeppink, label="Refined")
 end
 
-hline!(ptrend, [target_perigee], color=:red, label="Target Perigee")
+hline!(ptrend, [target_perigee*param3b.lstar,], color=:red, label="Target Perigee")
 
 # display plots 
-display(plot(ptraj, ptrend))
+display(plot(ptraj, ptrend; size=(1400,600)))
