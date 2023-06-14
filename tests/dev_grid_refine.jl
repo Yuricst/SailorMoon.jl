@@ -239,7 +239,7 @@ end
 
 # solved trajectory
 for solved in solved_sols_perigees
-    θsfs_refined, solved_sol, perigees_solsrefined = ref     # unpack
+    _, solved_sol, _ = solved     # unpack
     scatter!(ptraj, [Array(solved_sol)[1,1]], [Array(solved_sol)[2,1]], marker=:circle, color=:blue, label="LOI")
     plot!(ptraj, Array(solved_sol)[1,:], Array(solved_sol)[2,:], label="Traj", lw=0.7, color="lime")
 end
@@ -251,14 +251,14 @@ ptrend = plot(size=(800,600), frame_style=:box, grid_alpha=0.5, legend=:topright
 plot!(ptrend, θsfs*180/π, _perigees*param3b.lstar, marker=:circle, color=:blue, label="ELET Perigee")
 
 for ref in refined_sols_perigees
-    θsfs_refined, _, perigees_solsrefined = ref     # unpack
-    plot!(ptrend, θsfs_refined*180/π, perigees_solsrefined*param3b.lstar,
+    θsfs_refined, _, perigees_refined = ref     # unpack
+    plot!(ptrend, θsfs_refined*180/π, perigees_refined*param3b.lstar,
         marker=:circle, color=:deeppink, label="Refined")
 end
 
 for solved in solved_sols_perigees
-    θsfs_refined, _, perigees_solsrefined = ref     # unpack
-    plot!(ptrend, θsfs_refined*180/π, perigees_solsrefined*param3b.lstar,
+    θsfs_solved, _, perigees_solved = solved     # unpack
+    plot!(ptrend, θsfs_solved*180/π, perigees_solved*param3b.lstar,
         marker=:circle, color=:lime, label="Solved")
 end
 
