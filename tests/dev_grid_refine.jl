@@ -95,7 +95,10 @@ function find_perigee_SunB1(sol)
 end
 
 
-function get_perigee_sol(θsf, ϕ0 = 0.0)
+"""
+For given combination of θs and ϕ0, return perigee and ODEProblem's solution
+"""
+function get_perigee_sol(θsf::Real, ϕ0::Real=0.0)
     LPOArrival = SailorMoon.CR3BPLPO2(
         res.x0, res.period, ys0, prob_cr3bp_stm, ϵr, ϵv, Tsit5(), 1e-12, 1e-12, 0.005
     );
@@ -129,7 +132,10 @@ function get_perigee_sol(θsf, ϕ0 = 0.0)
     return _sol, _perigee 
 end
 
-function grid_perigees_sols(θsfs, ϕ0)
+"""
+Run `get_perigee_sol()` over a grid of θsfs, for fixed θ0
+"""
+function grid_perigees_sols(θsfs::Vector, ϕ0::Real)
     sols = []
     perigees = []
     @showprogress for θsf in θsfs
@@ -179,7 +185,7 @@ end
 
 # 4. Run regula-falsi ------------------------------------------------------ #
 """Residual function for root-solving at perigee"""
-res_func = function (θsf, get_sol=false)
+res_func = function (θsf, get_sol::Bool=false)
     _sol, rp = get_perigee_sol(θsf, ϕ0)
     if get_sol 
         return rp - target_perigee, _sol
@@ -188,45 +194,42 @@ res_func = function (θsf, get_sol=false)
     end
 end
 
-@show target_perigee;
+println("Refining solution via Regula-Falsi...")
 solved_sols_perigees = []
-for ref in refined_sols_perigees
+@showprogress for ref in refined_sols_perigees
     θsfs_refined, _, perigees_refined = ref     # unpack
     # check through θsf 
-    check_sign = 0.0
+    previous_sign = 0.0
     for (idx,rp) in enumerate(perigees_refined[1:end-1])
         rp_next = perigees_refined[idx+1]
-        @show (rp_next - target_perigee) 
-        @show (rp - target_perigee)
-        Δrp = (rp_next - target_perigee) - (rp - target_perigee)
-        if Δrp * check_sign < 0.0
+        current_sign = (rp_next - target_perigee) * (rp - target_perigee)
+        if current_sign * previous_sign < 0.0
             # detected change of sign, solve root-solving
             println("Run root-solving problem! θsfs_refined[idx] = ", θsfs_refined[idx]*180/π)
-            #@printf("Current rp = %1.0f, next rp = %1.0f\n", rp, rp_next)
-            # θsf_solved = find_zero(
-            #     res_func,
-            #     (θsfs_refined[idx], θsfs_refined[idx+1]),
-            #     Bisection()
-            # )
-            # _residual, solved_sol = function (θsf_solved, true)
-            # push!(
-            #     solved_sols_perigees,
-            #     [θsf_solved, solved_sol, target_perigee + _residual]
-            # )
+            θsf_solved = find_zero(
+                res_func,
+                (θsfs_refined[idx], θsfs_refined[idx+1]),
+                Bisection()
+            )
+            _residual, solved_sol = res_func(θsf_solved, true)
+            push!(
+                solved_sols_perigees,
+                [θsf_solved, solved_sol, target_perigee + _residual]
+            )
         end
-        check_sign = (rp_next - target_perigee) - (rp - target_perigee)
+        previous_sign = (rp_next - target_perigee) * (rp - target_perigee)
     end
 end
 #t0_solved = find_zero(res_func, (t0s[idx], t0s[idx+1]), Bisection())
 
 
 # 5. plot results --------------------------------------------------------- #
-# plot sanity check 
-colors = palette([:blue, :orange], n_θsf)
+# A. plot trajectory
+colors = palette([:blue, :orange], length(refined_sols_perigees))
 ptraj = plot(size=(600,600), frame_style=:box, aspect_ratio=:equal, grid_alpha=0.5, legend=false,
     xlabel="x, LU", ylabel="y, LU")
 
-for ref in refined_sols_perigees
+for (idx,ref) in enumerate(refined_sols_perigees)
     θsfs_refined, sols_refined, _ = ref  # unpack
     for (idx,sol) in enumerate(sols_refined)
         scatter!(ptraj, [Array(sol)[1,1]], [Array(sol)[2,1]], marker=:circle, color=colors[idx], label="LOI")
@@ -234,7 +237,15 @@ for ref in refined_sols_perigees
     end
 end
 
-# plot perigee distribution
+# solved trajectory
+for solved in solved_sols_perigees
+    θsfs_refined, solved_sol, perigees_solsrefined = ref     # unpack
+    scatter!(ptraj, [Array(solved_sol)[1,1]], [Array(solved_sol)[2,1]], marker=:circle, color=colors[idx], label="LOI")
+    plot!(ptraj, Array(solved_sol)[1,:], Array(solved_sol)[2,:], label="Traj", lw=0.7, color="lime")
+end
+
+
+# B. plot perigee distribution
 ptrend = plot(size=(800,600), frame_style=:box, grid_alpha=0.5, legend=:topright,
     xlabel="θsf", ylabel="Perigee, km")
 plot!(ptrend, θsfs*180/π, _perigees*param3b.lstar, marker=:circle, color=:blue, label="ELET Perigee")
@@ -243,6 +254,12 @@ for ref in refined_sols_perigees
     θsfs_refined, _, perigees_solsrefined = ref     # unpack
     plot!(ptrend, θsfs_refined*180/π, perigees_solsrefined*param3b.lstar,
         marker=:circle, color=:deeppink, label="Refined")
+end
+
+for solved in solved_sols_perigees
+    θsfs_refined, _, perigees_solsrefined = ref     # unpack
+    plot!(ptrend, θsfs_refined*180/π, perigees_solsrefined*param3b.lstar,
+        marker=:circle, color=:lime, label="Solved")
 end
 
 hline!(ptrend, [target_perigee*param3b.lstar,], color=:red, label="Target Perigee")
