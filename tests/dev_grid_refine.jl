@@ -169,7 +169,7 @@ for idx = 1:length(_perigees)-1
     global Δdir = _perigees[idx+1] - _perigees[idx]
 end
 
-# 3. re-search through regions of interest -------------------------------- #
+# 3. Re-search by zooming into regions of θsf of interest -------------------- #
 @printf("Number of Sun-angle candidates: %1.0f\n", length(θsf_interest))
 n_refined = 30
 refined_sols_perigees = []
@@ -203,9 +203,12 @@ solved_sols_perigees = []
     for (idx,rp) in enumerate(perigees_refined[1:end-1])
         rp_next = perigees_refined[idx+1]
         current_sign = (rp_next - target_perigee) * (rp - target_perigee)
-        if current_sign * previous_sign < 0.0
+        if current_sign < 0.0
             # detected change of sign, solve root-solving
             println("Run root-solving problem! θsfs_refined[idx] = ", θsfs_refined[idx]*180/π)
+            println("Currnet rp - target_radius = ", rp - target_perigee)
+            println("Next rp - target_radius = ", rp_next - target_perigee)
+
             θsf_solved = find_zero(
                 res_func,
                 (θsfs_refined[idx], θsfs_refined[idx+1]),
@@ -217,30 +220,27 @@ solved_sols_perigees = []
                 [θsf_solved, solved_sol, target_perigee + _residual]
             )
         end
-        previous_sign = (rp_next - target_perigee) * (rp - target_perigee)
     end
 end
-#t0_solved = find_zero(res_func, (t0s[idx], t0s[idx+1]), Bisection())
 
 
 # 5. plot results --------------------------------------------------------- #
 # A. plot trajectory
-colors = palette([:blue, :orange], length(refined_sols_perigees))
 ptraj = plot(size=(600,600), frame_style=:box, aspect_ratio=:equal, grid_alpha=0.5, legend=false,
     xlabel="x, LU", ylabel="y, LU")
 
 for (idx,ref) in enumerate(refined_sols_perigees)
     θsfs_refined, sols_refined, _ = ref  # unpack
     for (idx,sol) in enumerate(sols_refined)
-        scatter!(ptraj, [Array(sol)[1,1]], [Array(sol)[2,1]], marker=:circle, color=colors[idx], label="LOI")
-        plot!(ptraj, Array(sol)[1,:], Array(sol)[2,:], label="Traj", lw=0.7, color=colors[idx])
+        scatter!(ptraj, [Array(sol)[1,1]], [Array(sol)[2,1]], marker=:circle, color=:blue, label="LOI")
+        plot!(ptraj, Array(sol)[1,:], Array(sol)[2,:], label="Traj", lw=0.7, color=:blue)
     end
 end
 
 # solved trajectory
 for solved in solved_sols_perigees
     θsfs_refined, solved_sol, perigees_solsrefined = ref     # unpack
-    scatter!(ptraj, [Array(solved_sol)[1,1]], [Array(solved_sol)[2,1]], marker=:circle, color=colors[idx], label="LOI")
+    scatter!(ptraj, [Array(solved_sol)[1,1]], [Array(solved_sol)[2,1]], marker=:circle, color=:blue, label="LOI")
     plot!(ptraj, Array(solved_sol)[1,:], Array(solved_sol)[2,:], label="Traj", lw=0.7, color="lime")
 end
 
@@ -266,3 +266,8 @@ hline!(ptrend, [target_perigee*param3b.lstar,], color=:red, label="Target Perige
 
 # display plots 
 display(plot(ptraj, ptrend; size=(1400,600)))
+
+
+# 6. Process results ------------------------------------------------------- #
+# The solved solutions are in the `solved_sols_perigees` list; the second entry
+# in each entry of the list is the ODESolution struct.
