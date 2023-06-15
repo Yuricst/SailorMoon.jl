@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_radau_0613_velThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0613_velThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -28,7 +28,7 @@ using Distributed
     mdot_si = tmax_si / (isp_si * 9.81)
     mstar = 2500  # kg
 
-    global earth_leo_ub = 0.4   # 15000 / param3b.lstar  # km
+    global earth_leo_ub = 30000 / param3b.lstar  # km
     global earth_leo_lb = 3000 / param3b.lstar  # km
 
     tmax = AstrodynamicsBase.dimensional2canonical_thrust(
@@ -225,8 +225,8 @@ end
 
     ### Grid search parameters
     ### OPTION 1; grid generations
-    n = 10 # 60
-    m = 10 #300
+    n = 60
+    m = 300
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
     epsr_vec = 10.0 .^(-5)
@@ -322,7 +322,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=true);
+            save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
