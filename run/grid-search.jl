@@ -348,7 +348,7 @@ entries = [
 ]
 df = DataFrame([ name =>[] for name in entries])
 
-id = 1
+global id = 1
 color_start = "orange"
 color_end = "blue"
 color_gradation = cgrad([color_start, color_end], tof_bck)
@@ -485,7 +485,7 @@ for (i,sol) in enumerate(sim)
                     # r_sc - r_E
                     vec = state_rp[1:3] - rE 
                     x_unit = [1.0, 0.0, 0.0]
-                    α = acos(dot(vec, x_unit) / norm(vec))
+                    α = acos(dot(vec, x_unit) / norm(vec))  # velocity vector angle at rp 
 
                     if cross(x_unit, vec)[3] <= 0
                         α = -α
@@ -532,12 +532,8 @@ for (i,sol) in enumerate(sim)
 
                 
                 end
-
-
-
             end
         end
-
     end
 end
 
