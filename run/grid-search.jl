@@ -18,7 +18,7 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0613_velThrust.csv"
+    out_fname = "data/grid_search_Tsit5_0615_TidalThrust.csv"
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -38,7 +38,7 @@ using Distributed
         mdot_si, mstar, param3b.tstar
     )
 
-    dv_fun = SailorMoon.dv_vel_dir_sb1frame
+    dv_fun = SailorMoon.dv_tidal_dir_sb1frame
 
     if dv_fun == SailorMoon.dv_no_thrust
         tmax = 0.0
@@ -381,156 +381,158 @@ for (i,sol) in enumerate(sim)
 
                 coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
                 sma, ecc, inc, OMEGA, omega, nu = coe_entry
-
-                rp_kep = sma * (1-ecc)
-                ra_kep = sma * (1+ecc)
                 
-                # generate state @ periapsis
-                state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
-                state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
-                # println("state_rp: ", state_rp)
-
-                # obtian the eccentric anomaly & mean anomaly at entrance
-                cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
-                sinE = sqrt(1-ecc^2) * sin(nu) / (1 + cos(nu))
-                E = atan(sinE, cosE)
-                M = E - ecc*sin(E)
-                n_ = sqrt(param3b.mu1 / sma^3) 
-                tof_finale = abs(M / n_)
-
-                tof_tot = -sol.t[end] + tof_finale
-
-                t_vec = -sol.t
-                # rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
-                # x_rp = sol.u[end]
-
-                # find apoapsis      
-                # relative to Earth
-                # r_vec = sqrt.((hcat(sol.u...)[1,:] .+ param3b.mu2.*cos.(θmf .+ param3b.oml .* sol.t) .- [param3b.as]).^2
-                #             .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(θmf .+ param3b.oml .* sol.t)).^2
-                #             .+  hcat(sol.u...)[3,:].^2)
-                
-                # relative to B1 
-                r_vec = sqrt.((hcat(sol.u...)[1,:] .- [param3b.as]).^2
-                            .+ hcat(sol.u...)[2,:].^2
-                            .+ hcat(sol.u...)[3,:].^2)
-
-                ra, id_ra = findmax(r_vec)
-                dt_ra = - sol.t[id_ra]
-                dt_rp = tof_tot - dt_ra 
-
-                x_ra    = sol.u[id_ra][1]
-                y_ra    = sol.u[id_ra][2]
-                z_ra    = sol.u[id_ra][3]
-                xdot_ra = sol.u[id_ra][4]
-                ydot_ra = sol.u[id_ra][5]
-                zdot_ra = sol.u[id_ra][6]
-                m_ra    = sol.u[id_ra][7]                   
-
-                # # flag: lunar flyby? (cf. moon SOI = 66100 km)
-                # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
-                #             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
-                #             +   hcat(sol.u...)[3,:].^2)
-                # id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
-                        
-                # if ~isempty(id_lfb)
-                #     for k in id_lfb
-                #         if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
-                #             global lfb_count += 1
-                #         end
-                #     end    
-                # end
-
-
-                for (i, x) in enumerate(sol.u)
-                    t = sol.t[i]
-                    c1 = perilune_cond(x, t, pi-θsf)
-                    c2 = lunar_radius_cond2(x, t, pi-θsf)
+                # 06/15/2023: I don't like this if statement, but this is enevitable... 
+                if ecc < 1 + 1e-6
+                    rp_kep = sma * (1-ecc)
+                    ra_kep = sma * (1+ecc)
                     
-                    # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
-                    if  abs(c1) < 5e-2 
-                        global lfb_count += 1
+                    # generate state @ periapsis
+                    state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
+                    state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
+                    # println("state_rp: ", state_rp)
+
+                    # obtian the eccentric anomaly & mean anomaly at entrance
+                    cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
+                    sinE = sqrt(1-ecc^2) * sin(nu) / (1 + cos(nu))
+                    E = atan(sinE, cosE)
+                    M = E - ecc*sin(E)
+                    n_ = sqrt(param3b.mu1 / sma^3) 
+                    tof_finale = abs(M / n_)
+
+                    tof_tot = -sol.t[end] + tof_finale
+
+                    t_vec = -sol.t
+                    # rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
+                    # x_rp = sol.u[end]
+
+                    # find apoapsis      
+                    # relative to Earth
+                    # r_vec = sqrt.((hcat(sol.u...)[1,:] .+ param3b.mu2.*cos.(θmf .+ param3b.oml .* sol.t) .- [param3b.as]).^2
+                    #             .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(θmf .+ param3b.oml .* sol.t)).^2
+                    #             .+  hcat(sol.u...)[3,:].^2)
+                    
+                    # relative to B1 
+                    r_vec = sqrt.((hcat(sol.u...)[1,:] .- [param3b.as]).^2
+                                .+ hcat(sol.u...)[2,:].^2
+                                .+ hcat(sol.u...)[3,:].^2)
+
+                    ra, id_ra = findmax(r_vec)
+                    dt_ra = - sol.t[id_ra]
+                    dt_rp = tof_tot - dt_ra 
+
+                    x_ra    = sol.u[id_ra][1]
+                    y_ra    = sol.u[id_ra][2]
+                    z_ra    = sol.u[id_ra][3]
+                    xdot_ra = sol.u[id_ra][4]
+                    ydot_ra = sol.u[id_ra][5]
+                    zdot_ra = sol.u[id_ra][6]
+                    m_ra    = sol.u[id_ra][7]                   
+
+                    # # flag: lunar flyby? (cf. moon SOI = 66100 km)
+                    # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
+                    #             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
+                    #             +   hcat(sol.u...)[3,:].^2)
+                    # id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
+                            
+                    # if ~isempty(id_lfb)
+                    #     for k in id_lfb
+                    #         if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
+                    #             global lfb_count += 1
+                    #         end
+                    #     end    
+                    # end
+
+
+                    for (i, x) in enumerate(sol.u)
+                        t = sol.t[i]
+                        c1 = perilune_cond(x, t, pi-θsf)
+                        c2 = lunar_radius_cond2(x, t, pi-θsf)
+                        
+                        # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
+                        if  abs(c1) < 5e-2 
+                            global lfb_count += 1
+                        end
+
+                        if abs(c2) < 3e-2
+                            # println("watch out, lunar flyby is happening too early... ")
+                            global flag = true 
+                        end 
+
                     end
 
-                    if abs(c2) < 3e-2
-                        # println("watch out, lunar flyby is happening too early... ")
-                        global flag = true 
-                    end 
+                    if flag == false 
 
-                end
+                        r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
+                        id_lunar_rad   = findmin(abs.(r_vec .- param3b.mu1))
+                        id_lunar_rad   = id_lunar_rad[2]
+                        x_l    = sol.u[id_lunar_rad][1]
+                        y_l    = sol.u[id_lunar_rad][2]
+                        z_l    = sol.u[id_lunar_rad][3]
+                        xdot_l = sol.u[id_lunar_rad][4]
+                        ydot_l = sol.u[id_lunar_rad][5]
+                        zdot_l = sol.u[id_lunar_rad][6]
+                        m_l    = sol.u[id_lunar_rad][7]  
+                        t_lrad = -sol.t[id_lunar_rad]
 
-                if flag == false 
+                        # obtain α
+                        θs0 = θsf - param3b.oms * tof_tot
+                        θm0 = π - θs0
+                        rE = [
+                            param3b.as - param3b.mu2 * cos(θm0),
+                            -param3b.mu2 * sin(θm0),
+                            0.0
+                        ]
 
-                    r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
-                    id_lunar_rad   = findmin(abs.(r_vec .- param3b.mu1))
-                    id_lunar_rad   = id_lunar_rad[2]
-                    x_l    = sol.u[id_lunar_rad][1]
-                    y_l    = sol.u[id_lunar_rad][2]
-                    z_l    = sol.u[id_lunar_rad][3]
-                    xdot_l = sol.u[id_lunar_rad][4]
-                    ydot_l = sol.u[id_lunar_rad][5]
-                    zdot_l = sol.u[id_lunar_rad][6]
-                    m_l    = sol.u[id_lunar_rad][7]  
-                    t_lrad = -sol.t[id_lunar_rad]
+                        # r_sc - r_E
+                        vec = state_rp[1:3] - rE 
+                        x_unit = [1.0, 0.0, 0.0]
+                        α = acos(dot(vec, x_unit) / norm(vec))  # velocity vector angle at rp 
 
-                    # obtain α
-                    θs0 = θsf - param3b.oms * tof_tot
-                    θm0 = π - θs0
-                    rE = [
-                        param3b.as - param3b.mu2 * cos(θm0),
-                        -param3b.mu2 * sin(θm0),
-                        0.0
-                    ]
+                        if cross(x_unit, vec)[3] <= 0
+                            α = -α
+                        end
 
-                    # r_sc - r_E
-                    vec = state_rp[1:3] - rE 
-                    x_unit = [1.0, 0.0, 0.0]
-                    α = acos(dot(vec, x_unit) / norm(vec))  # velocity vector angle at rp 
+                        ϕ0  = grids[i][1]
+                        ϵr  = grids[i][2]
+                        ϵv  = grids[i][3]
+                        x_ini = sol.u[1][1]
+                        y_ini = sol.u[1][2]
+                        z_ini = sol.u[1][3]
+                        xdot_ini = sol.u[1][4]
+                        ydot_ini = sol.u[1][5]
+                        zdot_ini = sol.u[1][6]
+                        m_ini = sol.u[1][7]
 
-                    if cross(x_unit, vec)[3] <= 0
-                        α = -α
+                        x_rp = state_rp[1]
+                        y_rp = state_rp[2]
+                        z_rp = state_rp[3]
+                        xdot_rp = state_rp[4]
+                        ydot_rp = state_rp[5]
+                        zdot_rp = state_rp[6]
+                        m_rp = sol.u[end][7]
+
+                        # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
+                        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
+
+                        push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
+                                rp_kep, ra_kep, α, 
+                                ra, dt_ra, dt_rp, 
+                                x_ini, y_ini, z_ini, xdot_ini, ydot_ini, zdot_ini, m_ini,
+                                x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
+                                x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
+                                x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
+                                tof_tot, lfb_count])
+                        println("idx $i is a success!")
+
+                        color = color_gradation[round(-sol.t[end])]
+                        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
+
+                        global id += 1
+
+                        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
+
                     end
-
-                    ϕ0  = grids[i][1]
-                    ϵr  = grids[i][2]
-                    ϵv  = grids[i][3]
-                    x_ini = sol.u[1][1]
-                    y_ini = sol.u[1][2]
-                    z_ini = sol.u[1][3]
-                    xdot_ini = sol.u[1][4]
-                    ydot_ini = sol.u[1][5]
-                    zdot_ini = sol.u[1][6]
-                    m_ini = sol.u[1][7]
-
-                    x_rp = state_rp[1]
-                    y_rp = state_rp[2]
-                    z_rp = state_rp[3]
-                    xdot_rp = state_rp[4]
-                    ydot_rp = state_rp[5]
-                    zdot_rp = state_rp[6]
-                    m_rp = sol.u[end][7]
-
-                    # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                    # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
-
-                    push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
-                            rp_kep, ra_kep, α, 
-                            ra, dt_ra, dt_rp, 
-                            x_ini, y_ini, z_ini, xdot_ini, ydot_ini, zdot_ini, m_ini,
-                            x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
-                            x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
-                            x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
-                            tof_tot, lfb_count])
-                    println("idx $i is a success!")
-
-                    color = color_gradation[round(-sol.t[end])]
-                    # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
-
-                    global id += 1
-
-                    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
-
-                
                 end
             end
         end
