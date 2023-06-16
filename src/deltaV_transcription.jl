@@ -232,6 +232,61 @@ function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float6
     return τ * rot1 * rot2 * dir 
 end
 
+function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+    τ, γ, β = p[1], p[2], p[3]
+
+    koe = cart2kep(state0, param3b.mu1)
+    sma, ecc, inc, OMEGA, omega, theta = coe_entry
+    p = sma*(1-ecc^2)
+    h = norm(cross(state0[1:3],state0[4:6]))
+    
+    k1 = 2*sma^2*(1-e)*e *sin(theta) / h - a*p/h * sin(theta)
+    k2 = (1-e)*p - a * ((p+r) *cos(theta) + r*e)
+
+    gamma = atan(k1/k2)
+
+    if k1*cos(gamma) + k2*sin(gamma) < 0
+        gamma = gamma + pi
+    end
+
+    dir = [sin(gamma), cos(gamma), 0]
+
+    sin_β = sin(β)
+    cos_β = cos(β)
+    sin_γ = sin(γ)
+    cos_γ = cos(γ)
+    
+    # rot about y-axis 
+    rot1 = [
+        cos_β  0 sin_β
+        0      1 0
+        -sin_β 0 cos_β
+    ]
+
+    # rot about z-axis 
+    rot2 = [
+        cos_γ -sin_γ 0 
+        sin_γ cos_γ  0
+        0     0      1
+    ]
+
+    return τ * rot1 * rot2 * dir 
+end
+
+
+"""
+    dv_inertial_angles(mu::Float64, state0::Vector{Float64}, vinf_params)
+
+Construct delta-V vector based on angles w.r.t. inertial frame (Sun-B1 frame)
+"""
+function dv_inertial_angles(vinf_params)
+    # unpack dv-parameters
+    τ, γ, β = vinf_params[1], vinf_params[2], vinf_params[3]
+    dv_vec = τ * [cos(γ) * cos(β), sin(γ) * cos(β), sin(β)]
+    return dv_vec
+end
+
+
 
 ### ====== NOT IN USE (06/09/2023) ==============================================================
 
@@ -265,18 +320,6 @@ function dv_lvlh2inertial(mu::Float64, state0, vinf_params)
     A_IO = reshape(vcat(o1I, o2I, o3I), 3, 3)
     dv_inertial = A_IO * dv_lvlh
     return dv_inertial
-end
-
-"""
-    dv_inertial_angles(mu::Float64, state0::Vector{Float64}, vinf_params)
-
-Construct delta-V vector based on angles w.r.t. inertial frame (Sun-B1 frame)
-"""
-function dv_inertial_angles(vinf_params)
-    # unpack dv-parameters
-    τ, γ, β = vinf_params[1], vinf_params[2], vinf_params[3]
-    dv_vec = τ * [cos(γ) * cos(β), sin(γ) * cos(β), sin(β)]
-    return dv_vec
 end
 
 
