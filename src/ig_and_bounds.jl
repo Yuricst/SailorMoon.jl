@@ -13,8 +13,6 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
 
     tof_leo2mid = row.dt2
     tof_mid2lpo = row.dt1
-    rp    = row.rp_kep
-    ra    = row.ra_kep
     m_rp  = row.m_rp
     m_lpo = row.m_lpo
     tof   = row.tof
