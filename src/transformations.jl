@@ -256,3 +256,35 @@ function ine2rot(θ::Real, ω::Real)
     return rotmat
 end
 
+
+
+# """
+# 	keplerian_to_cartesian(x_oe::Array{<:Real,1}, μ::Real)
+
+# Conversion from Keplerian to Cartesian.
+# Input vector in order `[sma, ecc, inc, Ω, ω, θ]`.
+# """
+# function koe2cart(x_oe::Array{<:Real,1}, μ::Real)
+# 	# unpack
+# 	sma, ecc, inc, Ω, ω, θ = x_oe
+#     # angular momentum
+#     if ecc <= 1.0
+#         h = sqrt(sma * μ * (1 - ecc^2))
+#     else
+#         h = sqrt(abs(sma) * μ * (ecc^2 - 1))   # hyperbolic case
+#     end
+#     # perifocal vector
+#     x = (h^2 / μ) * (1 / (1 + ecc * cos(θ))) * cos(θ)
+#     y = (h^2 / μ) * (1 / (1 + ecc * cos(θ))) * sin(θ)
+#     vx = (μ / h) * (-sin(θ))
+#     vy = (μ / h) * (ecc + cos(θ))
+#     rpf = [x, y, 0.0]
+#     vpf = [vx, vy, 0.0]
+
+#     r_rot3 = perifocal2geocentric(rpf, ω, inc, Ω)
+#     v_rot3 = perifocal2geocentric(vpf, ω, inc, Ω)
+
+#     # save inertial state
+#     state_inr = vcat(r_rot3, v_rot3)[:] # cat(r_rot3, v_rot3, dims=(1,1))
+#     return state_inr
+# end
