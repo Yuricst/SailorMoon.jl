@@ -18,7 +18,13 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-    out_fname = "data/grid_search_Tsit5_0615_drpdtThrust.csv"
+
+    ## ====== something you want to change =====================
+    
+    out_fname = "data/grid_search_Tsit5_0618_drpdtThrust.csv"
+    dv_fun = SailorMoon.dv_max_drpdt_dir_sb1frame
+    
+    ## =========================================================
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -38,9 +44,7 @@ using Distributed
         mdot_si, mstar, param3b.tstar
     )
 
-    dv_fun = SailorMoon.dv_no_thrust
-
-    if dv_fun == SailorMoon.dv_max_drpdt_dir_sb1frame
+    if dv_fun == SailorMoon.dv_no_thrust 
         tmax = 0.0
         mdot = 0.0 
     end 
