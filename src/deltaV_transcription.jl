@@ -235,7 +235,7 @@ end
 function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
-    koe = kep2cart(state0, param3b.mu1)
+    koe = kep2cart(cart2kep, param3b.mu1)
     sma, ecc, inc, OMEGA, omega, theta = koe
     r = norm(state0[1:3])
     p = sma*(1-ecc^2)
