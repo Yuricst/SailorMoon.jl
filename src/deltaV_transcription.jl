@@ -182,7 +182,15 @@ end
 function dv_anti_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
-    dir  = - state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
+    # change into EMrot fram 
+    state_EMrot = transform_SunB1_to_EMrot(state0, θ, ωm, as)
+
+    dir_EMrot = -state_EMrot[4:6]
+    vec = vcat(dir_EMrot, [0.0,0.0,0.0])
+    vec_sb1 = transform_EMrot_to_SunB1(vec, θ, ωm, as)
+    dir = vec_sb1[1:3] - [as, 0, 0]
+
+    # dir  = - state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
     sin_β = sin(β)
     cos_β = cos(β)
     sin_γ = sin(γ)
@@ -232,14 +240,14 @@ function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float6
     return τ * rot1 * rot2 * dir 
 end
 
-function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, state0, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
 
     koe = cart2kep(state0, param3b.mu1)
     sma, ecc, inc, OMEGA, omega, theta = koe
     r = norm(state0[1:3])
     p = sma*(1-ecc^2)
-    h = norm(cross(state0[1:3],state0[4:6]))
+    h = norm(cross(state0[1:3], state0[4:6]))
     
     k1 = 2*sma^2*(1-ecc)*ecc *sin(theta) / h - sma*p/h * sin(theta)
     k2 = (1-ecc)*p - sma * ((p + r) *cos(theta) + r*ecc)

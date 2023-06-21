@@ -114,7 +114,7 @@ while true
 
     if Info == :Solve_Succeeded
         vec = vcat(fixed_tof, xopt[7], xopt)
-        CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
+        CSV.write(output_fname,  Tables.table(vec), writeheader=false, append=true)
     else
         println("Optimization couldn't succeed. Terminated... ")
         break

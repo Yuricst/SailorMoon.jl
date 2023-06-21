@@ -12,9 +12,11 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/grid_search_Tsit5_0613_velThrust.csv"
-# dv_dir function corresponding to the csv file 
-dir_func = SailorMoon.dv_vel_dir_sb1frame 
+filename = "data/grid_search_Tsit5_0615_EMrotThrust.csv"
+dir_func = SailorMoon.dv_EMrotdir_sb1frame
+output_fname = "data/diffcorr_0619_EMrotThrust.csv"
+
+## =============================================================
 
 # 3body parameter
 param3b = SailorMoon.dynamics_parameters()
@@ -39,12 +41,11 @@ sn_options = Dict(
     "Major feasibility tolerance" => 1.e-6,
     "Major optimality tolerance"  => 1.e-1,
     "Minor feasibility tolerance" => 1.e-6,
-    "Major iterations limit" => 1000,
+    "Major iterations limit" => 50,
     "Major print level" => 1,
     "printfile" => "snopt_opt.out",
 )
 
-output_fname = "data/output_0530.csv"
 
 # ===============================================================
 
@@ -59,9 +60,9 @@ df = DataFrame(CSV.File(filename))
 
 height = size(df,1)
 
-# for (m, row) in enumerate( eachrow( df ) ) 
+for (m, row) in enumerate( eachrow( df ) ) 
 
-row = df[3,:]
+    # row = df[3,:]
 
     # perform the differential correction only if there is no flyby
 
@@ -76,7 +77,7 @@ row = df[3,:]
     # println("x0 - lb: ", x0 - lx)
     # println("ub - lb; ", ux-lx)
     # println("x0: ", x0)
-    println("residual (needs to be 0): ", res)
+    # println("residual (needs to be 0): ", res)
 
     # _, sol_list, sol_bal, _ = SailorMoon.multishoot_trajectory2(x0, dir_func, paramMulti, true, false)
     # for j = 1:length(sol_list)
@@ -97,13 +98,22 @@ row = df[3,:]
             lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
             options=sn_options, outputfile=true, lencw=5000, iSumm=6,
         )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+
     else 
         error("optim_solver needs to be ipopt or snopt")
     end
 
-    fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-    sol_vec = vcat(fixed_tof, xopt[7], xopt)
-    CSV.write(output_fname,  Tables.table(transpose(sol_vec)), writeheader=false, append=true)
+    if Info == "Finished successfully: optimality conditions satisfied"    # IPOPT -> :Solve_Succeeded
+        println("solved! row added for ig #", m, "/", height)
+
+        fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
+        sol_vec = vcat(m, fixed_tof, xopt[7], xopt)  # original id, tof, mass@LEO, xopt
+        sol_vec = transpose(sol_vec)
+
+        CSV.write(output_fname,  Tables.table(sol_vec), writeheader=false, append=true)
+
+    end 
+
 
     # println("optimization #", m)
 
@@ -145,4 +155,4 @@ row = df[3,:]
     #         end
     #     end
 
-# end
+end

@@ -14,6 +14,7 @@ using Distributed
     using DataFrames
     using JSON
     using CSV
+    using ODEInterfaceDiffEq
 
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
@@ -21,9 +22,9 @@ using Distributed
 
     ## ====== something you want to change =====================
     
-    out_fname = "data/grid_search_Tsit5_0618_drpdtThrust.csv"
-    dv_fun = SailorMoon.dv_max_drpdt_dir_sb1frame
-    
+    out_fname = "data/grid_search_Tsit5_0618_antivelThrust.csv"
+    dv_fun = SailorMoon.dv_anti_vel_dir_sb1frame
+        
     ## =========================================================
 
     param3b = SailorMoon.dynamics_parameters()
@@ -324,7 +325,7 @@ end
 
 ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
-sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(); trajectories=length(grids),
+sim = solve(ensemble_prob, AutoTsit5(Rosenbrock23()), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
             save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
