@@ -472,6 +472,53 @@ function multishoot_trajectory5(
     end
 end
 
+# function to retreive the time series data (t, u(t)) from x0 
+function x2time_series(
+    x::Vector, 
+    dir_func, 
+    param_multi::multishoot_params,
+    )
+
+    u = []
+    t = []
+
+    res, sol_param_list, sols_ballistic, tofs = multishoot_trajectory2(x, dir_func, param_multi, true, false)
+        
+    # ballistic legs
+    for sol_ballistic in sols_ballistic
+        u = sol_ballistic.u[:]
+        t = sol_ballistic.t[:]
+    end
+    
+    for j = 1:Int(floor(length(sol_param_list)/param_multi.n_arc))
+        
+        for k = 1:param_multi.n_arc
+                        
+            if mod(j,2) == 1
+                # backward propagation
+                sol, _, name = sol_param_list[length(sol_param_list) - j*param_multi.n_arc + k]
+                u = vcat(u, sol.u[:])
+                t_append = sol.t[:] .+ t[end]
+                t = vcat(t, t_append)
+                
+            else
+                # forward propagation
+                sol, _, name = sol_param_list[length(sol_param_list)-(j-1)*param_multi.n_arc - k + 1]
+                u_append = sol.u[end:-1:1, :]
+            t_append = sol.t[end:-1:1] .- sol.t[end] .+ t[end]
+                u = vcat(u, u_append)
+                t = vcat(t, t_append)
+            end
+
+        end
+        
+    end
+    
+    u = Base.Array(u)
+    u = hcat(u...)[:,:]
+
+    return t, u 
+end
 
 
 
