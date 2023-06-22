@@ -222,6 +222,10 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
 
     dir = [sin(gamma), cos(gamma), 0]
 
+      # RTN -> xyz Earth-inertial
+
+    # xyz Earth-inertial -> rot coord & frame 
+
     sin_β = sin(β)
     cos_β = cos(β)
     sin_γ = sin(γ)
