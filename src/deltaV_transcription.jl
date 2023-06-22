@@ -130,46 +130,6 @@ function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float
 end
 
 
-"""
-    Anti Earth-Moon rotating direction in SB1 rot. frame
-    Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun 
-"""
-function dv_antiEMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
-    τ, γ, β = p[1], p[2], p[3]
-
-    # vector B1 -> SC 
-    x = state0[1] - as
-    y = state0[2]
-
-    dir = [
-        y/sqrt(x^2+y^2) 
-        -x/sqrt(x^2+y^2)
-        0
-        ]
-    
-    sin_β = sin(β)
-    cos_β = cos(β)
-    sin_γ = sin(γ)
-    cos_γ = cos(γ)
-    
-    # rot about y-axis 
-    rot1 = [
-        cos_β  0 sin_β
-        0      1 0
-        -sin_β 0 cos_β
-    ]
-
-    # rot about z-axis 
-    rot2 = [
-        cos_γ -sin_γ 0 
-        sin_γ cos_γ  0
-        0     0      1
-    ]
-
-    return τ * rot1 * rot2 * dir 
-
-end
-
 
 """
     anti-Earth-Moon rotating direction in EM rot. frame
@@ -242,6 +202,8 @@ end
 
 function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, state0, p::Vector{Float64})
     τ, γ, β = p[1], p[2], p[3]
+
+    # sb1 -> Earth inertial 
 
     koe = cart2kep(state0, param3b.mu1)
     sma, ecc, inc, OMEGA, omega, theta = koe
