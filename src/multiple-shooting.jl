@@ -479,8 +479,13 @@ function x2time_series(
     param_multi::multishoot_params,
     )
 
-    u = []
-    t = []
+    θm_lpo = x[19+12*param_multi.n_arc]  
+    u  = []
+    t  = []
+    th = []
+
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+
 
     res, sol_param_list, sols_ballistic, tofs = multishoot_trajectory2(x, dir_func, param_multi, true, false)
         
@@ -488,27 +493,54 @@ function x2time_series(
     for sol_ballistic in sols_ballistic
         u = sol_ballistic.u[:]
         t = sol_ballistic.t[:]
+        th = [[0,0,0] for i in collect(1:size(u,1))]
+
     end
     
+    # nonbalistic legs: lr_bck -> lr_fwd -> mid_bck -> mid_fwd -> lpo_bck
     for j = 1:Int(floor(length(sol_param_list)/param_multi.n_arc))
         
         for k = 1:param_multi.n_arc
-                        
+            
             if mod(j,2) == 1
                 # backward propagation
                 sol, _, name = sol_param_list[length(sol_param_list) - j*param_multi.n_arc + k]
-                u = vcat(u, sol.u[:])
                 t_append = sol.t[:] .+ t[end]
-                t = vcat(t, t_append)
+                u_append = sol.u[:]
+
+                # somehow, get a thrust parameter (1x3 double)
+                if j == 1      # lr_bck
+                    params = x_lr[10 : 9+3*param_multi.n_arc]
+                elseif j == 3  # mid_bck
+                    params = x_mid[10 : 9+3*param_multi.n_arc]                    
+                elseif j == 5  # lpo_bck
+                    params = x_LPO[5 : end]
+                end 
+
+                # println("test: ", params[13:15])
+                thrust_angle = params[3*(param_multi.n_arc-k+1)-2 : 3*(param_multi.n_arc-k+1)]
                 
             else
                 # forward propagation
                 sol, _, name = sol_param_list[length(sol_param_list)-(j-1)*param_multi.n_arc - k + 1]
                 u_append = sol.u[end:-1:1, :]
-            t_append = sol.t[end:-1:1] .- sol.t[end] .+ t[end]
-                u = vcat(u, u_append)
-                t = vcat(t, t_append)
+                t_append = sol.t[end:-1:1] .- sol.t[end] .+ t[end]
+
+                # somehow, get a thrust parameter (1x3 double)
+                if j == 2      # lr_fwd
+                    params = x_lr[10+3*param_multi.n_arc : end]
+                elseif j == 4  # mid_fwd
+                    params = x_mid[10+3*param_multi.n_arc : end]
+                end 
+                
+                thrust_angle = params[3*k-2 : 3*k]
+
             end
+
+            th_append = get_thrust(t_append, u_append, thrust_angle, θm_lpo, dir_func)
+            u  = vcat(u, u_append)
+            t  = vcat(t, t_append)
+            th = vcat(th, th_append)
 
         end
         
@@ -516,9 +548,27 @@ function x2time_series(
     
     u = Base.Array(u)
     u = hcat(u...)[:,:]
+    th = hcat(th...)
 
-    return t, u 
+    return t, u, th
 end
+
+# thrust_param: [τ, γ, β]
+function get_thrust(tlist, ulist, thrust_param, θm_lpo, dir_func)
+    thrusts = []
+    for (idx, tnow) in enumerate(tlist)
+        θm    = θm_lpo - param3b.oml*tnow
+        unow  = ulist[idx]
+        thvec = dir_func(param3b.mus, param3b.as, θm, param3b.oml, unow, thrust_param)
+        # thrusts = vcat(thrusts, transpose(thvec))
+        push!(thrusts, thvec)
+
+    end 
+
+    return thrusts
+end
+
+
 
 
 
