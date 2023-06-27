@@ -15,7 +15,7 @@ include("../src/SailorMoon.jl")
 filename = "data/grid_search_Tsit5_0615_EMrotThrust.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
 output_fname = "data/diffcorr_0619_EMrotThrust.csv"
-
+optim_solver = "snopt"
 ## =============================================================
 
 # 3body parameter
@@ -24,7 +24,6 @@ param3b = SailorMoon.dynamics_parameters()
 # multiple shooting parameter
 paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
-optim_solver = "snopt"
 
 # run minimizer with IPOPT
 ip_options = Dict(

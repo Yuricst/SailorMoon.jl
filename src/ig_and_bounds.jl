@@ -100,7 +100,7 @@ end
 """
 function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64)
 
-    x0 = collect(values(row[3:end]))
+    x0 = collect(values(row[4:end]))
 
     svm_mid_cyl = x0[10+6*n_arc:16+6*n_arc]
 

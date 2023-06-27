@@ -9,11 +9,14 @@ using joptimise
 
 include("../src/SailorMoon.jl")
 
-### INPUTS ###################################
+
+## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/output_0519.csv"
-# dv_dir function corresponding to the csv file 
-dir_func = SailorMoon.dv_EMrotdir_sb1frame 
+filename = "data/diffcorr_0619_EMrotThrust.csv"
+dir_func = SailorMoon.dv_EMrotdir_sb1frame
+output_fname = "data/opt_0619_EMrotThrust.csv"
+optim_solver = "snopt"
+## =============================================================
 
 # 3body parameter
 param3b = SailorMoon.dynamics_parameters()
@@ -44,8 +47,6 @@ sn_options = Dict(
 # arc design (1 or 2 or 3)
 arc_design = 2
 
-output_fname = "data/output_opt_0519.csv"
-
 ########################################## 
 
 if dir_func == SailorMoon.dv_no_thrust
@@ -55,7 +56,7 @@ else
 end
 
 # load initial guess
-df = DataFrame(CSV.File(filename))
+df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
 row = df[1,:]
@@ -63,35 +64,44 @@ row = df[1,:]
 x0, lx, ux = SailorMoon.make_ig_bounds2_raw(row, τ_ig, paramMulti.n_arc)
 
 # obtain m_LEO 
-_, sol_list, _, _ = SailorMoon.multishoot_trajectory2(x0, dir_func, paramMulti, true, false)
+_, sol_list, _, tofs = SailorMoon.multishoot_trajectory2(x0, dir_func, paramMulti, true, false)
 sol, _, _  = sol_list[1]
 m_leo = sol[end, end]
 println("m_leo; ", m_leo)
 
-fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixmf_mintof(dir_func, paramMulti, x0, m_leo)
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixmleo_mintof(dir_func, paramMulti, x0, m_leo)
+# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs))
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)
 # println("ub - x0: ", ux - x0)
 # println("x0 - lb: ", x0 - lx)
-# println("ub - lb; ", ux-lx)
+println("ub - lb; ", ux-lx)
 # println("x0: ", x0)
-# println("residual (needs to be 0): ", res)
+println("residual (needs to be 0): ", maximum(res))
 
+if optim_solver == "ipopt"
+    xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+    options=ip_options, outputfile=true,
+    )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+elseif optim_solver == "snopt"
+    xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+        lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+        options=sn_options, outputfile=true, lencw=100000, iSumm=6
+    )  #  derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
-# inital guess
-xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
-    lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
-    options=sn_options, outputfile=true, 
-)  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+else 
+    error("optim_solver needs to be ipopt or snopt")
+end
+
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-vec = vcat(fixed_tof, xopt[7], xopt)  # tof, m_leo
+vec = vcat(1, fixed_tof, xopt[7], xopt)  # tof, m_leo
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
-
 println(Info)
-println("Now, using the initial guess, we reoptimize...")
+# println("Now, using the initial guess, we reoptimize...")
 
 # while true
 #     global xopt 

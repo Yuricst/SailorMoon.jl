@@ -365,6 +365,7 @@ function multishoot_trajectory4(
     peri_cond = norm(sc_earth) - alt
     # println("alt: ", peri_cond)
 
+    # println(tofs)
     tof_cond = tof_target - sum(tofs)
 
     # LEO tangential departure condition
@@ -374,6 +375,7 @@ function multishoot_trajectory4(
     # residuals    
     res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, tof_cond, dep_LEO)[:]
 
+    # println(res)
     # output
     if get_sols == false
         return res
