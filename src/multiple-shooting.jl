@@ -58,6 +58,10 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
     x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
     x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
 
+    # re-scale x_lr and x_mid to throw them into ODEs
+    x_lr[1]  = x_lr[1]  + param3b.as
+    x_mid[1] = x_mid[1] + param3b.as
+
     # get time of flights
     tofs = [x_lr[8], x_lr[9], x_mid[8], x_mid[9], x_LPO[4]]
     θf = x_LPO[1]
@@ -75,29 +79,7 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
     return x_lr, x_mid, x_LPO, tofs, θs
 end
 
-function unpack_x2plus(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
-    # unpack
-    nx = length(x)
-    x_lr  = x[1:9+6*n_arc]
-    x_mid = x[10+6*n_arc:18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
-    x_LPO = x[19+12*n_arc:22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
 
-    # get time of flights
-    tofs = [x_lr[8], x_lr[9], x_mid[8] - (x_lr[8]+x_lr[9]+x_mid[9]+x_LPO[4]), x_mid[9], x_LPO[4]]
-    θf = x_LPO[1]
-    θs = [
-        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
-        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
-        θf
-    ]
-    # print message
-    if verbose
-        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
-        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
-        # println("θf: ", θf)
-    end
-    return x_lr, x_mid, x_LPO, tofs, θs
-end
 
 
 
@@ -238,9 +220,9 @@ function multishoot_trajectory2(
     )
 
     # propagate midpoint backward
-    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
-    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
-    svm0 = vcat(sv0_cart, x_mid[7])
+    sv0 = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    # sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
         svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
@@ -330,9 +312,9 @@ function multishoot_trajectory4(
     )
 
     # propagate midpoint backward
-    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
-    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
-    svm0 = vcat(sv0_cart, x_mid[7])
+    sv0 = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    # sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
         svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
@@ -348,7 +330,7 @@ function multishoot_trajectory4(
     # propagate from LPO backward
     sv0_LPO, θ0_lpo, sol_ballistic_bck = get_LPO_state(x_LPO, θs, param_multi, verbose)
     svf_lpo = propagate_arc!(
-        sv0_LPO, θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
+        sol_ballistic_bck.u[end], θ0_lpo, [0, -(tofs[5] - param_multi.ballistic_time_back)/param_multi.n_arc], x_LPO[5 : end], 
         dir_func, param_multi,
         get_sols, sol_param_list, "lpo_arc"
     )
@@ -422,9 +404,9 @@ function multishoot_trajectory5(
     )
 
     # propagate midpoint backward
-    sv0_cyl = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
-    sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
-    svm0 = vcat(sv0_cart, x_mid[7])
+    sv0 = x_mid[1:6]  # state-vector at midpoint (position is cylindrical frame)
+    # sv0_cart = cylind2cart_only_pos(sv0_cyl)  # convert to Cartesian coordinate
+    svm0 = vcat(sv0, x_mid[7])
 
     svf_mid_bck = propagate_arc!(
         svm0, θs[2], [0, -tofs[3]/param_multi.n_arc], x_mid[10 : 9+3*param_multi.n_arc], dir_func, param_multi, 
@@ -598,6 +580,30 @@ function unpack_x(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
         println("θf: ", θf)
     end
     return x_LEO, x_mid, x_LPO, tofs, θs
+end
+
+function unpack_x2plus(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+    # unpack
+    nx = length(x)
+    x_lr  = x[1:9+6*n_arc]
+    x_mid = x[10+6*n_arc:18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc:22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # get time of flights
+    tofs = [x_lr[8], x_lr[9], x_mid[8] - (x_lr[8]+x_lr[9]+x_mid[9]+x_LPO[4]), x_mid[9], x_LPO[4]]
+    θf = x_LPO[1]
+    θs = [
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-3:end])),
+        θf - param3b.oms*sum(broadcast(abs, tofs[end-1:end])),
+        θf
+    ]
+    # print message
+    if verbose
+        @printf("ToF per arc  : %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n", tofs...)
+        @printf("Phase angles : %3.3f, %3.3f, %3.3f\n", θs...)
+        # println("θf: ", θf)
+    end
+    return x_lr, x_mid, x_LPO, tofs, θs
 end
 
 function unpack_x3(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T

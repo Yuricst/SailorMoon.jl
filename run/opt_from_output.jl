@@ -12,10 +12,10 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0619_EMrotThrust.csv"
+filename = "data/diffcorr_0619_EMrotThrust2.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
 output_fname = "data/opt_0619_EMrotThrust.csv"
-optim_solver = "snopt"
+optim_solver = "ipopt"
 ## =============================================================
 
 # 3body parameter
@@ -39,8 +39,9 @@ sn_options = Dict(
     "Major feasibility tolerance" => 1.e-6,
     "Major optimality tolerance"  => 1.e-6,
     "Minor feasibility tolerance" => 1.e-6,
-    "Major iterations limit" => 1000,
+    "Major iterations limit" => 100,
     "Major print level" => 1,
+    "Major step limit" => 0.01   # 0.1 - 0.01? # default; 2
     # "printfile" => "snopt_print.out",
 )
 
@@ -59,7 +60,7 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-row = df[1,:]
+row = df[2,:]
 
 x0, lx, ux = SailorMoon.make_ig_bounds2_raw(row, τ_ig, paramMulti.n_arc)
 
@@ -69,15 +70,15 @@ sol, _, _  = sol_list[1]
 m_leo = sol[end, end]
 println("m_leo; ", m_leo)
 
-fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixmleo_mintof(dir_func, paramMulti, x0, m_leo)
-# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs))
+# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness5_minToF_fixmleo(dir_func, paramMulti, x0, m_leo)
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness4_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs))
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)
 # println("ub - x0: ", ux - x0)
 # println("x0 - lb: ", x0 - lx)
-println("ub - lb; ", ux-lx)
-# println("x0: ", x0)
+# println("ub - lb; ", ux-lx)
+println("x0: ", x0)
 println("residual (needs to be 0): ", maximum(res))
 
 if optim_solver == "ipopt"
