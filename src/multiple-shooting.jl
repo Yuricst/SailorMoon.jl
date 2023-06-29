@@ -263,7 +263,14 @@ function multishoot_trajectory2(
     # dep_LEO = 0.0
 
     # residuals  
-    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, dep_LEO)[:]
+    res = vcat(
+        svf_mid_bck[1:2] - svf_lr_fwd[1:2],
+        svf_mid_bck[4:5] - svf_lr_fwd[4:5],
+        svf_mid_bck[7] - svf_lr_fwd[7],
+        svf_lpo[1:2] - svf_mid_fwd[1:2],
+        svf_lpo[4:5] - svf_mid_fwd[4:5],
+        svf_lpo[7] - svf_mid_fwd[7],
+        peri_cond, dep_LEO)[:]
 
     # output
     if get_sols == false
@@ -355,7 +362,14 @@ function multishoot_trajectory4(
     # dep_LEO = 0.0
 
     # residuals    
-    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, tof_cond, dep_LEO)[:]
+    res = vcat(
+        svf_mid_bck[1:2] - svf_lr_fwd[1:2],
+        svf_mid_bck[4:5] - svf_lr_fwd[4:5],
+        svf_mid_bck[7] - svf_lr_fwd[7],
+        svf_lpo[1:2] - svf_mid_fwd[1:2],
+        svf_lpo[4:5] - svf_mid_fwd[4:5],
+        svf_lpo[7] - svf_mid_fwd[7],
+        peri_cond, tof_cond, dep_LEO)[:]
 
     # println(res)
     # output
@@ -446,7 +460,14 @@ function multishoot_trajectory5(
     # dep_LEO = 0.0
 
     # residuals    
-    res = vcat(svf_mid_bck - svf_lr_fwd, svf_lpo - svf_mid_fwd, peri_cond, m_leo_cond, dep_LEO)[:]
+    res = vcat(
+        svf_mid_bck[1:2] - svf_lr_fwd[1:2],
+        svf_mid_bck[4:5] - svf_lr_fwd[4:5],
+        svf_mid_bck[7] - svf_lr_fwd[7],
+        svf_lpo[1:2] - svf_mid_fwd[1:2],
+        svf_lpo[4:5] - svf_mid_fwd[4:5],
+        svf_lpo[7] - svf_mid_fwd[7],
+        peri_cond, m_leo_cond, dep_LEO)[:]
 
     # output
     if get_sols == false

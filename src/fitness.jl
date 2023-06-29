@@ -138,7 +138,7 @@ function get_fitness2_minToF(
     x
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
-    ng = 16
+    ng = 12
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
@@ -198,7 +198,7 @@ function get_fitness4_minmleo_fixToF(
     tof
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
-    ng = 17
+    ng = 13
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
@@ -257,7 +257,7 @@ function get_fitness5_minToF_fixmleo(
     mf
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
-    ng = 17
+    ng = 13
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T

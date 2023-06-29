@@ -15,7 +15,7 @@ include("../src/SailorMoon.jl")
 filename = "data/diffcorr_0619_EMrotThrust2.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
 output_fname = "data/opt_0619_EMrotThrust.csv"
-optim_solver = "ipopt"
+optim_solver = "snopt"
 ## =============================================================
 
 # 3body parameter
@@ -26,7 +26,7 @@ paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
 # run minimizer with IPOPT
 ip_options = Dict(
-    "max_iter" => 2500,   # 1500 ~ 2500
+    "max_iter" => 50,   # 1500 ~ 2500
     "tol" => 1e-2,
     "constr_viol_tol" => 1e-4,
     "dual_inf_tol" => 1e-1,
@@ -41,7 +41,7 @@ sn_options = Dict(
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 100,
     "Major print level" => 1,
-    "Major step limit" => 0.01   # 0.1 - 0.01? # default; 2
+    "Major step limit" => 0.0001   # 0.1 - 0.01? # default; 2
     # "printfile" => "snopt_print.out",
 )
 
@@ -102,6 +102,7 @@ vec = vcat(1, fixed_tof, xopt[7], xopt)  # tof, m_leo
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
 println(Info)
+println(x0)
 # println("Now, using the initial guess, we reoptimize...")
 
 # while true
