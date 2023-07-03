@@ -57,7 +57,7 @@ end
 
 # load initial guess ( "grid_serach_XXX.csv" )
 df = DataFrame(CSV.File(filename))
-df = df[537:end, :]
+df = df[527:536, :]
 
 height = size(df,1)
 
