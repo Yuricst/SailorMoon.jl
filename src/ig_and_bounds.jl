@@ -6,10 +6,10 @@
 """
     updated version along with multishoot_trajectory2
 """
-function make_ig_bounds2(row, τ_ig, n_arc::Int64)
-    sv_mid_cart = [row.x_ra, row.y_ra, row.z_ra, row.xdot_ra, row.ydot_ra, row.zdot_ra]
+function make_ig_bounds2(row, τ_ig, n_arc::Int64, scale::Bool=false)
     # change the coordinates into cylindrical (only position)
     # svm_mid_cyl = vcat(cart2cylind_only_pos(sv_mid_cart), row.m_ra)
+
 
     tof_leo2mid = row.dt2
     tof_mid2lpo = row.dt1
@@ -29,28 +29,41 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
     m_lr    = row.m_lr
     t_lr    = row.t_lr
 
-    # scaling problem: special treatment for x_lr and x_ra
-    x_lr = x_lr - param3b.as
-    x_ra = x_ra - param3b.as
+    if scale
+        factor  = 10
+        factort = 10
+        # scaling problem: special treatment for x_lr and x_ra
+        x_lr = x_lr - param3b.as
+        svm_mid_cart = [
+            row.x_ra-param3b.as, row.y_ra, 0.0, 
+            row.xdot_ra, row.ydot_ra, 0.0, row.m_ra
+            ] ./ factor
+
+    else 
+        factor  = 1
+        factort = 1
+        svm_mid_cart = [row.x_ra, row.y_ra, 0.0, row.xdot_ra, row.ydot_ra, 0.0, row.m_ra] 
+    end
 
     rE = 6375 # km
 
     # x_lr = [x,y,z,vx,vy,vz, m, tof_back, tof_fwd, controls...] (9 + 6*n_arc)
     ig_x_lr = vcat(
-        x_lr, y_lr, z_lr, xdot_lr, ydot_lr, zdot_lr, m_lr,
-        tof - t_lr, tof_leo2mid/2 + t_lr - tof,
+        x_lr/factor, y_lr/factor, 0.0, xdot_lr/factor, ydot_lr/factor, 0.0, m_lr,
+        (tof - t_lr)/factort, (tof_leo2mid/2 + t_lr - tof)/factort,
         vcat([[τ_ig,0,0] for i = 1:2*n_arc]...)
     )
 
     # x_mid = [r,theta,z, vx,vy,vz, m, tof_back, tof_forward, controls...] (9 + 6*n_arc)
     ig_x_mid = vcat(
-        svm_mid_cart, tof_leo2mid/2, tof_mid2lpo/2, 
+        svm_mid_cart, 
+        tof_leo2mid/2/factort, tof_mid2lpo/2/factort, 
         vcat([[τ_ig,0,0] for i = 1:2n_arc]...)
     )
 
     # x_LPO = [θf, ϕ, mf, tof, controls...] (4 + 3*n_arc)
     ig_x_LPO = vcat(
-        [θsf, ϕ0, m_lpo, tof_mid2lpo/2],
+        [θsf, ϕ0, m_lpo, tof_mid2lpo/2/factort],
         vcat([[τ_ig,0,0] for i = 1:n_arc]...)
     )
 
@@ -58,35 +71,38 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64)
 
     ### lb, ub of variables 
     # for the lyapunov orbit, everything is 2D, so just set β=0 in [τ, γ, β]
+
+    dstate = 0.3 / factor 
+
     lx_lr = vcat(
-        x_lr - 0.3, y_lr - 0.3, 0.0, -2.0, -2.0, -0.0, 1.0,
-        0.8*(tof - t_lr), 0.8*(tof_leo2mid/2 + t_lr - tof),
+        ig_x_lr[1] - dstate, ig_x_lr[2] - dstate, 0.0, -1.5/factor, -1.5/factor, -0.0, 1.0,
+        0.8*(tof - t_lr)/factort, 0.8*(tof_leo2mid/2 + t_lr - tof)/factort,
         vcat([[0.0, 0.0, 0.0] for i = 1:n_arc]..., [[0.0, -pi, 0.0] for i = 1:n_arc]...)
     )
 
     ux_lr = vcat(
-        x_lr + 0.3, y_lr + 0.3, 0, 2.0, 2.0, 0.0, 1.3,
-        1.2*(tof - t_lr), 1.2*(tof_leo2mid/2 + t_lr - tof),
+        ig_x_lr[1] + dstate, ig_x_lr[2] + dstate, 0, 1.5/factor, 1.5/factor, 0.0, 1.3,
+        1.2*(tof - t_lr)/factort, 1.2*(tof_leo2mid/2 + t_lr - tof)/factort,
         vcat([[0.0, 0.0, 0.0] for i = 1:n_arc]..., [[1.0, pi, 0.0] for i = 1:n_arc]...)
     )
 
     lx_mid = vcat(
-        x_ra-0.3, y_ra-0.3, 0.0, -1.0, -1.0, 0.0, 1.0, 
-        0.7*tof_leo2mid/2, 0.7*tof_mid2lpo/2, 
+        ig_x_mid[1] - dstate, ig_x_mid[2] - dstate, 0.0, -1.0/factor, -1.0/factor, 0.0, 1.0, 
+        0.7*tof_leo2mid/2/factort, 0.7*tof_mid2lpo/2/factort, 
         vcat([[0.0, -pi, 0.0] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
-        x_ra+0.3, y_ra+0.3, 0.0, 1.0, 1.0, 0.0, 1.2,
-        1.3*tof_leo2mid/2, 1.3*tof_mid2lpo/2, 
+        ig_x_mid[1] + dstate, ig_x_mid[2] + dstate, 0.0, 1.0/factor, 1.0/factor, 0.0, 1.2,
+        1.3*tof_leo2mid/2/factort, 1.3*tof_mid2lpo/2/factort, 
         vcat([[1.0, pi, 0.0] for i = 1:2n_arc]...)
     )
 
     lx_lpo = vcat(
-        [-pi/4, -pi/4, 1.000, 0.7*tof_mid2lpo/2],
+        [θsf-pi/4, ϕ0-pi/4, 1.000, 0.7*tof_mid2lpo/2/factort],
         vcat([[0.0, -pi, 0.0] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [2.25*pi, 2.25*pi, 1.000, 1.3*tof_mid2lpo/2],
+        [θsf+pi/4, ϕ0+pi/4, 1.000, 1.3*tof_mid2lpo/2/factort],
         vcat([[1.0, pi, 0.0] for i = 1:n_arc]...)
     )
 
@@ -102,9 +118,9 @@ end
     The input row[3:end] is the raw variable of x0,x1,...xN.
     used in opt_from_output.jl
 """
-function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64)
+function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64, scale::Bool=false)
 
-    x0 = collect(values(row[4:end]))
+    x0 = collect(values(row[4:end])) 
 
     # svm_mid_cyl = x0[10+6*n_arc:16+6*n_arc]
 
@@ -112,8 +128,8 @@ function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64)
     tof_leo2mid1 = x0[9]   # lr -> mid direction tof 
     tof_leo2mid2 = x0[17+6*n_arc]   # mid -> leo direction tof 
     tof_mid2lpo1 = x0[18+6*n_arc]   # mid -> lpo direction tof
-    tof_mid2lpo1 = x0[22+12*n_arc]   # lpo => mid direction tof 
-    tof = tof_leo2mid0 + tof_leo2mid1 + tof_leo2mid2 + tof_mid2lpo1 + tof_mid2lpo1
+    tof_mid2lpo2 = x0[22+12*n_arc]   # lpo => mid direction tof 
+    tof = tof_leo2mid0 + tof_leo2mid1 + tof_leo2mid2 + tof_mid2lpo1 + tof_mid2lpo2
 
     θsf  = x0[19+12*n_arc]
     ϕ0   = x0[20+12*n_arc]
@@ -131,51 +147,66 @@ function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64)
     x_ra    = x0[10+6*n_arc]
     y_ra    = x0[11+6*n_arc]
 
-    # scaling problem: special treatment for x_lr and x_ra
-    x_lr = x_lr - param3b.as
-    x_ra = x_ra - param3b.as
-
-    x0[1]          = x_lr
-    x0[10+6*n_arc] = x_ra
-
     rE = 6375 # km
+
+    if scale
+        factor  = 10
+        factort = 10 
+
+        # state
+        x_lr = x_lr - param3b.as
+        x_ra = x_ra - param3b.as
+        x0[1]          = x_lr  
+        x0[10+6*n_arc] = x_ra 
+        x0[1:6] = x0[1:6] / factor
+        x0[10+6n_arc:15+6n_arc] = x0[10+6n_arc:15+6n_arc] / factor
+
+        # time
+        x0[8:9] = x0[8:9]./factort   
+        x0[17+6*n_arc:18+6*n_arc] = x0[17+6*n_arc:18+6*n_arc] ./ factort  
+        x0[22+12*n_arc] = x0[22+12*n_arc] ./ factort
+    else
+        factor  = 1
+        factort = 1
+    end
+
+    dstate = 0.3/factor
 
     ### lb, ub of variables 
     lx_lr = vcat(
-        x_lr - 0.3, y_lr - 0.3, 0.0 , -2.0, -2.0, 0.0, 1.0,
-        0.8*x0[8], 0.8*x0[9],
+        x0[1] - dstate, x0[2] - dstate, 0, -1.5/factor, -1.5/factor, 0.0, 1.0,
+        0.9*tof_leo2mid0/factort, 0.8*tof_leo2mid1/factort,
         vcat([[0.0,0.0,0.0] for i = 1:2n_arc]...)
     )
-
     ux_lr = vcat(
-        x_lr + 0.3, y_lr + 0.3, 0.0 , 2.0, 2.0, 0.0, 1.3,
-        1.2*x0[8], 1.2*x0[9],
+        x0[1] + dstate, x0[2] + dstate, 0, 1.5/factor, 1.5/factor, 0.0, 1.3,
+        1.1*tof_leo2mid0/factort, 1.2*tof_leo2mid1/factort,
         vcat([[0.0,0.0,0.0] for i = 1:2n_arc]...)
     )
-
 
     lx_mid = vcat(
-        x_ra-0.3, y_ra-0.3, 0.0 , -1.0, -1.0, 0.0, 1.0, 
-        0.7*x0[17+6*n_arc], 0.7*x0[18+6*n_arc], 
+        x0[10+6*n_arc] - dstate,  x0[11+6*n_arc]-dstate, 0.0, -1.0/factor, -1.0/factor, 0.0, 1.0, 
+        0.8*tof_leo2mid2/factort, 0.8*tof_mid2lpo1/factort, 
         vcat([[0.0,-pi,0.0] for i = 1:2n_arc]...)
     )
     ux_mid = vcat(
-        x_ra+0.3, y_ra+0.3, 0.0, 1.0, 1.0, 0.0, 1.2,
-        1.3*x0[17+6*n_arc], 1.3*x0[18+6*n_arc],
-        vcat([[1.0,-pi,0.0] for i = 1:2n_arc]...)
+        x0[10+6*n_arc] + dstate,  x0[11+6*n_arc] + dstate, 0.0, 1.0/factor, 1.0/factor, 0.0, 1.2, 
+        1.2*tof_leo2mid2/factort, 1.2*tof_mid2lpo1/factort,
+        vcat([[1.0,pi,0.0] for i = 1:2n_arc]...)
     )
 
     lx_lpo = vcat(
-        [-pi/4, -pi/4, 1.000, 0.7* x0[22+12*n_arc]],
+        [θsf-pi/4, ϕ0-pi/4, 1.000, 0.7*tof_mid2lpo2/factort],
         vcat([[0.0,-pi,0.0] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [2.25*pi, 2.25*pi, 1.000, 1.3* x0[22+12*n_arc]],
+        [θsf+pi/4, ϕ0+pi/4, 1.000, 1.3*tof_mid2lpo2/factort],
         vcat([[1.0,pi,0.0] for i = 1:n_arc]...)
     )
 
     lx = vcat(lx_lr, lx_mid, lx_lpo)
     ux = vcat(ux_lr, ux_mid, ux_lpo)
+
 
     return x0, lx, ux
 end

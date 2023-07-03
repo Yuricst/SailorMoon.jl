@@ -162,6 +162,25 @@ function transform_EearthIne_to_sb1(state_earthIne::Vector, θm::Real, ωm::Real
     return state_sb1
 end
 
+"""
+    RTN frme to Earth inertial frame 
+"""
+function transform_RTN_to_EarthIne(state_rtn::Vector, stateSC_Eine::Vector)
+    r = stateSC_Eine[1:3]
+    n = cross(r, stateSC_Eine[4:6])
+    
+    r = r / norm(r)
+    n = n / norm(n)
+    t = cross(r,n)
+
+    mat = hcat(r,t,n)
+
+    state_EarthIne = mat * state_rtn
+
+    return state_EarthIne
+end
+
+
 
 """
 convert the initial parameters (rp, ra, alpha) into the initial state in the SB1 frame 

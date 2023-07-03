@@ -4,6 +4,7 @@ using CSV
 using DataFrames
 using LinearAlgebra
 using Printf
+using Base.Threads
 
 push!(LOAD_PATH,"../../joptimise/src/")
 using joptimise
@@ -12,9 +13,9 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/grid_search_Tsit5_0615_EMrotThrust.csv"
-dir_func = SailorMoon.dv_EMrotdir_sb1frame
-output_fname = "data/diffcorr_0619_EMrotThrust.csv"
+filename = "data/grid_search_Tsit5_0618_maxJCThrust.csv"
+dir_func = SailorMoon.dv_maxJC_dir_sb1frame
+output_fname = "data/diffcorr_0618_maxJCThrust.csv"
 optim_solver = "snopt"
 ## =============================================================
 
@@ -56,16 +57,20 @@ end
 
 # load initial guess ( "grid_serach_XXX.csv" )
 df = DataFrame(CSV.File(filename))
+df = df[537:end, :]
 
 height = size(df,1)
 
+
 for (m, row) in enumerate( eachrow( df ) ) 
+# @threads for m in collect(1:height)
+    # row = df[m,:]
 
     # row = df[3,:]
 
     # perform the differential correction only if there is no flyby
 
-    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc)
+    x0, lx, ux = SailorMoon.make_ig_bounds2(row, τ_ig, paramMulti.n_arc, false)
     fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2(dir_func, paramMulti, x0)
     # fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_fixToF(dir_func, paramMulti, x0, row.tof)
 
@@ -106,7 +111,7 @@ for (m, row) in enumerate( eachrow( df ) )
         println("solved! row added for ig #", m, "/", height)
 
         fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-        sol_vec = vcat(m, fixed_tof, xopt[7], xopt)  # original id, tof, mass@LEO, xopt
+        sol_vec = vcat(row.id, fixed_tof, xopt[7], xopt)  # original id, tof, mass@LEO, xopt
         sol_vec = transpose(sol_vec)
 
         CSV.write(output_fname,  Tables.table(sol_vec), writeheader=false, append=true)

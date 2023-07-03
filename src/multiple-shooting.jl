@@ -51,16 +51,31 @@ _prob_base = ODEProblem(rhs_bcr4bp_sb1frame2_thrust!, zeros(7,1), [0, -10.0], pa
 """
     unpacking variables along with multishoot_trajectory2
 """
-function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where T
+function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false, scale::Bool=false) where T
+    
+    factor  = 10
+    factort = 10
+
     # unpack
     nx = length(x)
     x_lr  = x[1 : 9+6*n_arc]
     x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
     x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
 
-    # re-scale x_lr and x_mid to throw them into ODEs
-    x_lr[1]  = x_lr[1]  + param3b.as
-    x_mid[1] = x_mid[1] + param3b.as
+    if scale
+        # state
+        x_lr[1:6]  = x_lr[1:6]  * factor
+        x_mid[1:6] = x_mid[1:6] * factor
+        x_lr[1]    = x_lr[1]  + param3b.as
+        x_mid[1]   = x_mid[1] + param3b.as
+
+        # time 
+        x_lr[8:9]  = x_lr[8:9] * factor
+        x_mid[8:9] = x_mid[8:9] * factor
+        x_LPO[4]   = x_LPO[4] *factort   # lpo => mid direction tof
+
+        # println("variables are scaled!")
+    end
 
     # get time of flights
     tofs = [x_lr[8], x_lr[9], x_mid[8], x_mid[9], x_LPO[4]]
@@ -77,9 +92,35 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false) where 
         # println("θf: ", θf)
     end
     return x_lr, x_mid, x_LPO, tofs, θs
+
 end
 
+"""
+    as we scaled x0s, we would like to convert from old x to new x
+"""
+function oldx2newx(x, n_arc)
+    factor = 10
 
+    # unpack
+    nx = length(x)
+    x_lr  = x[1 : 9+6*n_arc]
+    x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # length 
+    x_lr[1]    = x_lr[1]  - param3b.as
+    x_mid[1]   = x_mid[1] - param3b.as
+    x_lr[1:6]  = x_lr[1:6]  / factor
+    x_mid[1:6] = x_mid[1:6] / factor
+
+    # time
+    x_lr[8:9]  = x_lr[8:9] / factor
+    x_mid[8:9] = x_mid[8:9] / factor
+    
+    xnew = vcat(x_lr, x_mid, x_LPO)
+
+
+end
 
 
 
@@ -194,11 +235,12 @@ function multishoot_trajectory2(
     dir_func, 
     param_multi::multishoot_params,
     get_sols::Bool=false, 
-    verbose::Bool=false
+    verbose::Bool=false,
+    scale::Bool=false
     ) where T
 
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale) 
 
     # initialize storage
     sol_param_list = []
@@ -293,11 +335,17 @@ function multishoot_trajectory4(
     param_multi::multishoot_params,
     tof_target::Real,
     get_sols::Bool=false, 
-    verbose::Bool=false
+    verbose::Bool=false,
+    scale::Bool=false
     ) where T
 
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale)
+    
+    # println("x_lr: ",  [round(el,digits=3) for el in x_lr])
+    # println("x_mind: ", [round(el,digits=3) for el in x_mid])
+    # println("x_LPO: ",  [round(el,digits=3) for el in x_LPO])
+    # println("tofs: ",  [round(el,digits=3) for el in tofs])
 
     # initialize storage
     sol_param_list = []
@@ -392,11 +440,17 @@ function multishoot_trajectory5(
     param_multi::multishoot_params,
     mleo_target::Real,
     get_sols::Bool=false, 
-    verbose::Bool=false
+    verbose::Bool=false,
+    scale::Bool=false
     ) where T
 
     # unpack decision vector
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale)
+
+    println("x_lr: ", x_lr)
+    println("x_mind: ", x_mid)
+    println("x_LPO: ", x_LPO)
+    println("tofs: ", tofs)
 
     # initialize storage
     sol_param_list = []
@@ -482,6 +536,7 @@ function x2time_series(
     x::Vector, 
     dir_func, 
     param_multi::multishoot_params,
+    scale::Bool=false,
     )
 
     θm_lpo = x[19+12*param_multi.n_arc]  
@@ -489,10 +544,9 @@ function x2time_series(
     t  = []
     th = []
 
-    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc)
+    x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale)
 
-
-    res, sol_param_list, sols_ballistic, tofs = multishoot_trajectory2(x, dir_func, param_multi, true, false)
+    res, sol_param_list, sols_ballistic, tofs = multishoot_trajectory2(x, dir_func, param_multi, true, false, scale)
         
     # ballistic legs
     for sol_ballistic in sols_ballistic

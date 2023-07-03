@@ -15,15 +15,16 @@ Generate fitness function
 function get_fitness2(
     dir_func,
     param_multi::multishoot_params,
-    x
+    x, 
+    scale::Bool=false
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 + 2 (rp & tangential departure)
-    ng = 16
+    ng = 12
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory2(x, dir_func, param_multi, false, false) 
+        res = multishoot_trajectory2(x, dir_func, param_multi, false, false, scale) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -75,15 +76,16 @@ function get_fitness4_fixToF(
     dir_func,
     param_multi::multishoot_params,
     x, 
-    tof
+    tof, 
+    scale::Bool=false
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
-    ng = 17
+    ng = 13
 
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory4(x, dir_func, param_multi, tof, false, false) 
+        res = multishoot_trajectory4(x, dir_func, param_multi, tof, false, false, scale) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -135,7 +137,8 @@ end
 function get_fitness2_minToF(
     dir_func,
     param_multi::multishoot_params,
-    x
+    x, 
+    scale::Bool=false
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
     ng = 12
@@ -143,7 +146,7 @@ function get_fitness2_minToF(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory2(x, dir_func, param_multi, false, false) 
+        res = multishoot_trajectory2(x, dir_func, param_multi, false, false, scale) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -195,7 +198,8 @@ function get_fitness4_minmleo_fixToF(
     dir_func,
     param_multi::multishoot_params,
     x, 
-    tof
+    tof, 
+    scale::Bool=true
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
     ng = 13
@@ -203,11 +207,12 @@ function get_fitness4_minmleo_fixToF(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory4(x, dir_func, param_multi, tof, false, false) 
+        res = multishoot_trajectory4(x, dir_func, param_multi, tof, false, false, scale) 
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
         residuals = zeros(ng)
         residuals[:] = res[:]
+        # println("res: ", residuals)
         return residuals
     end
 
@@ -254,7 +259,8 @@ function get_fitness5_minToF_fixmleo(
     dir_func,
     param_multi::multishoot_params,
     x, 
-    mf
+    mf, 
+    scale::Bool=true
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
     ng = 13
@@ -262,7 +268,7 @@ function get_fitness5_minToF_fixmleo(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory5(x, dir_func, param_multi, mf, false, false) 
+        res = multishoot_trajectory5(x, dir_func, param_multi, mf, false, false, scale) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)

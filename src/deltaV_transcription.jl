@@ -204,6 +204,7 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
     τ, γ, β = p[1], p[2], p[3]
 
     # sb1 -> Earth inertial 
+    state_Eine = transform_sb1_to_EearthIne(state0, θ, ωm, param3b.mu2, as)
 
     koe = cart2kep(state0, param3b.mu1)
     sma, ecc, inc, OMEGA, omega, theta = koe
@@ -220,11 +221,20 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
         gamma = gamma + pi
     end
 
-    dir = [sin(gamma), cos(gamma), 0]
+    dir_RTN = [sin(gamma), cos(gamma), 0]
 
-      # RTN -> xyz Earth-inertial
+    # RTN -> xyz Earth-inertial
+    dir_Eine = transform_RTN_to_EarthIne(dir_RTN, state_Eine)
+    # dir_Eine = vcat(dir_Eine, [0.0,0.0,0.0])
+    # Eine frame is parallel to SB1 rotating frame, so we do not need to change the direction from here 
+    dir = dir_Eine    
+    
+    # xyz Earth-inertial -> rot coord & frame
+    # dir_sb1 = transform_EearthIne_to_sb1(dir_Eine, θ, ωm, param3b.mu2, as) 
+    # dir = dir_sb1[1:3]
 
-    # xyz Earth-inertial -> rot coord & frame 
+    # println("dir_sb1:", norm(dir), " ", dir)
+
 
     sin_β = sin(β)
     cos_β = cos(β)
@@ -245,7 +255,7 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
         0     0      1
     ]
 
-    return τ * rot1 * rot2 * dir 
+    return τ * rot1 * rot2 * dir
 end
 
 

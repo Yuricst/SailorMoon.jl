@@ -22,8 +22,8 @@ using Distributed
 
     ## ====== something you want to change =====================
     
-    out_fname = "data/grid_search_Tsit5_0618_antivelThrust.csv"
-    dv_fun = SailorMoon.dv_anti_vel_dir_sb1frame
+    out_fname = "data/grid_search_Tsit5_0701_drpdt_Thrust.csv"
+    dv_fun = SailorMoon.dv_max_drpdt_dir_sb1frame
         
     ## =========================================================
 
@@ -230,8 +230,8 @@ end
 
     ### Grid search parameters
     ### OPTION 1; grid generations
-    n = 60
-    m = 300
+    n = 10 #60
+    m = 2 #300
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
     epsr_vec = 10.0 .^(-5)
@@ -327,14 +327,14 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, AutoTsit5(Rosenbrock23()), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=false);
+            save_everystep=true);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),
 #             callback=cbs,
 #             save_everystep=true);
 
-ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2)
+ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2, xlim=[385,391], ylim=[-3,3])
 # plot!(ptraj, xlims=(385,395), ylims=(-8,8))
 cmap = :viridis
 
@@ -542,6 +542,9 @@ for (i,sol) in enumerate(sim)
             end
         end
     end
+
+    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
+
 end
 
 scatter!(ptraj, [param3b.as], [0.0], label="")  # roughly earth
