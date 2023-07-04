@@ -568,11 +568,11 @@ function x2time_series(
                 u_append = sol.u[:]
 
                 # somehow, get a thrust parameter (1x3 double)
-                if j == 1      # lr_bck
+                if j == 5      # lr_bck
                     params = x_lr[10 : 9+3*param_multi.n_arc]
                 elseif j == 3  # mid_bck
                     params = x_mid[10 : 9+3*param_multi.n_arc]                    
-                elseif j == 5  # lpo_bck
+                elseif j == 1  # lpo_bck
                     params = x_LPO[5 : end]
                 end 
 
@@ -586,9 +586,9 @@ function x2time_series(
                 t_append = sol.t[end:-1:1] .- sol.t[end] .+ t[end]
 
                 # somehow, get a thrust parameter (1x3 double)
-                if j == 2      # lr_fwd
+                if j == 4      # lr_fwd
                     params = x_lr[10+3*param_multi.n_arc : end]
-                elseif j == 4  # mid_fwd
+                elseif j == 2  # mid_fwd
                     params = x_mid[10+3*param_multi.n_arc : end]
                 end 
                 
