@@ -22,7 +22,7 @@ using Distributed
 
     ## ====== something you want to change =====================
     
-    out_fname = "data/grid_search_Tsit5_0701_drpdt_Thrust.csv"
+    out_fname = "data/grid_search_Tsit5_0703_drpdt_Thrust.csv"
     dv_fun = SailorMoon.dv_max_drpdt_dir_sb1frame
         
     ## =========================================================
@@ -230,8 +230,8 @@ end
 
     ### Grid search parameters
     ### OPTION 1; grid generations
-    n = 10 #60
-    m = 2 #300
+    n = 60
+    m = 300
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
     θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi] 
     epsr_vec = 10.0 .^(-5)
@@ -327,7 +327,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, AutoTsit5(Rosenbrock23()), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=true);
+            save_everystep=false);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),

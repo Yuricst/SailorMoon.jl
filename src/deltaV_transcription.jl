@@ -226,6 +226,7 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
     # RTN -> xyz Earth-inertial
     dir_Eine = transform_RTN_to_EarthIne(dir_RTN, state_Eine)
     # dir_Eine = vcat(dir_Eine, [0.0,0.0,0.0])
+    
     # Eine frame is parallel to SB1 rotating frame, so we do not need to change the direction from here 
     dir = dir_Eine    
     
@@ -234,7 +235,6 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
     # dir = dir_sb1[1:3]
 
     # println("dir_sb1:", norm(dir), " ", dir)
-
 
     sin_β = sin(β)
     cos_β = cos(β)
