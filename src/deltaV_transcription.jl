@@ -204,7 +204,9 @@ function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, 
     τ, γ, β = p[1], p[2], p[3]
 
     # sb1 -> Earth inertial 
-    state_Eine = transform_sb1_to_EearthIne(state0, θ, ωm, param3b.mu2, as)
+    # state_Eine = transform_sb1_to_EearthIne(state0, θ, ωm, param3b.mu2, as)
+    state_Eine = transform_sb1_to_EearthIne(state0, 0.0, ωm, param3b.mu2, as)
+
 
     koe = cart2kep(state0, param3b.mu1)
     sma, ecc, inc, OMEGA, omega, theta = koe

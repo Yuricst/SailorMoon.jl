@@ -182,11 +182,19 @@ using Distributed
         end
     end
 
+
     # switch on the engine after escaping from the "invariant manifold"
     function wbs_boundary_cond(u,t,int)
         coast_time = 10 * (24*60*60) / param3b.tstar
         return abs(t) - coast_time
     end 
+
+    
+    function collision_cond(u,t,int)
+        val = NaN 
+        r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  # earth-SC distance 
+        return (r - earth_leo_lb*0.8) * (r - 8)  # terminate if it's too close to Earth, and remove if it's too far from Earth
+    end
 
     ### affect!
     terminate_affect!(int) = terminate!(int)
@@ -301,8 +309,9 @@ end
     lunar_rad_cb   = ContinuousCallback(lunar_radius_cond2, nothing, no_affect!; rootfind=false, save_positions=(true, false))
     ballistic_cb   = ContinuousCallback(switch2ballistic_cond, nothing, turn_off_engine_affect!; rootfind=false, save_positions=(true, false))
     # wbs_cb         = ContinuousCallback(wbs_boundary_cond, turn_on_engine_affect!; rootfind=false, save_positions=(false,false))
+    collision_cb   = ContinuousCallback(collision_cond, terminate_affect!; rootfind=false, save_positions=(false, true))
 
-    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cb)  # wbs_cb
+    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cb, collision_cb)  # wbs_cb
 
     svf_ = zeros(Float64, 1, 7)
     tspan = [0, -tof_bck]
