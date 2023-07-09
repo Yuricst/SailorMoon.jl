@@ -12,7 +12,7 @@ INPUT
 """
 dummy function for the no thrust mode
 """
-function dv_no_thrust(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_no_thrust(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector)
     return [0.0, 0.0, 0.0]
 end
 
@@ -22,7 +22,7 @@ end
 Construct delta-V vector, directing towards B2, Sun-(E-M barycenter) barycenter
 Frame: Sun-B1 rotating frame. origin = E-M barycenter (B1) 
 """
-function dv_sun_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_sun_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector)
     τ, γ, β = p[1], p[2], p[3]
 
     b2 = [-μS/(μS+1)*as, 0, 0]
@@ -58,7 +58,8 @@ end
 Construct delta-V vector, directing along with tidal force vector in the Sun-B1 frame
 Frame: Sun-B1 rotating frame. origin = B1 (E-M barycenter)
 """
-function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector)
+
     τ, γ, β = p[1], p[2], p[3]
     # sun-B1 direction unit vector
     r = [-as, 0, 0]
@@ -93,7 +94,7 @@ end
     Earth-Moon rotating direction in SB1 rot frame
     Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun 
 """
-function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector{Float64})
+function dv_EMrotdir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0::Vector{Float64}, p::Vector)
     τ, γ, β = p[1], p[2], p[3]
 
     # vector B1 -> SC 
@@ -139,7 +140,7 @@ end
     However,  we are propagating the dynamics in SB1 frame so we need to rotate the coordination at every timestep.
     Here, S-B1 frame refers to the reduced S-B1 frame where B2 = Sun. 
 """
-function dv_maxJC_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+function dv_maxJC_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector)
     τ, γ, β = p[1], p[2], p[3]
 
     # change into EMrot fram 
@@ -174,7 +175,11 @@ function dv_maxJC_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Floa
 end
 
 
-function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector{Float64})
+function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float64, state0, p::Vector)
+    if typeof(p) == Vector{Int64}
+        p = float(p)
+    end
+
     τ, γ, β = p[1], p[2], p[3]
 
     dir  = state0[4:6] / norm(state0[4:6])  # opposite of the SC velocity
@@ -200,7 +205,7 @@ function dv_vel_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Float6
     return τ * rot1 * rot2 * dir 
 end
 
-function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, state0, p::Vector{Float64})
+function dv_max_drpdt_dir_sb1frame(μS::Float64, as::Float64, θ, ωm::Float64, state0, p::Vector)
     τ, γ, β = p[1], p[2], p[3]
 
     # sb1 -> Earth inertial 

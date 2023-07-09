@@ -58,9 +58,9 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false, scale:
 
     # unpack
     nx = length(x)
-    x_lr  = x[1 : 9+6*n_arc]
-    x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
-    x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+    x_lr  = Float64.(x[1 : 9+6*n_arc])
+    x_mid = Float64.(x[10+6*n_arc : 18+12*n_arc])    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = Float64.(x[19+12*n_arc : 22+15*n_arc])  # x[14+9n_arc:13+9n_arc+4+3n_arc]
 
     if scale
         # state
@@ -191,7 +191,11 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
     sv_iter = [el for el in sv0]
     θ_iter = θ0
     for i = 1:param_multi.n_arc
-        τ, γ, β = x_control[1+3*(i-1) : 3*i]
+        p = x_control[1+3*(i-1) : 3*i]
+        if typeof(p) == Vector{Int}
+            p = float(p)
+        end
+        τ, γ, β = p[1], p[2], p[3]
 
         params = [
             param3b.mu2, param3b.mus, param3b.as, pi - θ_iter, 
@@ -241,6 +245,7 @@ function multishoot_trajectory2(
 
     # unpack decision vector
     x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale) 
+    # println(x_lr, " ", x_mid, " ", x_LPO)
 
     # initialize storage
     sol_param_list = []
