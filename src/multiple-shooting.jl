@@ -202,7 +202,7 @@ function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multi
 
         # Tsit5()
         _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)
-        sol = solve(_prob, Tsit5(); reltol=1e-12, abstol=1e-12)
+        sol = solve(_prob, AutoTsit5(Rosenbrock23()); reltol=1e-12, abstol=1e-12)
 
         # rk4 in DifferentialEquations
         # _prob = remake(_prob_base; tspan=tspan, u0=sv_iter, p=params)
