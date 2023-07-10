@@ -13,9 +13,9 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0619_EMrotThrust2.csv"
-dir_func = SailorMoon.dv_EMrotdir_sb1frame
-output_fname = "data/opt_0619_EMrotThrust.csv"
+filename = "data/diffcorr_0618_maxJCThrust2.csv"
+dir_func = SailorMoon.dv_maxJC_dir_sb1frame
+output_fname = "data/opt_0618_maxJCThrust.csv"
 optim_solver = "snopt"
 ## =============================================================
 
@@ -42,7 +42,7 @@ sn_options = Dict(
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 400,
     "Major print level" => 1,
-    "Major step limit" => 0.002,   # 0.1 - 0.01? # default; 2
+    "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2
     "central difference interval" => 1e-6
     # "printfile" => "snopt_print.out",
 )
@@ -62,7 +62,11 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-row = df[1,:]
+id = 2
+row =df[id,:]
+row = Float64.(collect(row))
+
+
 
 x0, lx, ux = SailorMoon.make_ig_bounds2_raw(row, τ_ig, paramMulti.n_arc, true)
 println("x_lr: ",  [round(el,digits=3) for el in x0[1 : 9]])
@@ -102,7 +106,7 @@ end
 
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-vec = vcat(1, fixed_tof, xopt[7], xopt)  # tof, m_leo
+vec = vcat(id, fixed_tof, xopt[7], xopt)  # tof, m_leo
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
 println(Info)

@@ -1,0 +1,37 @@
+
+ SNMEMA EXIT 100 -- finished successfully
+ SNMEMA INFO 104 -- memory requirements estimated
+
+ Trial version of SNOPT -- for evaluation or academic purposes only
+
+ XXX  User workspace parameters had to be modified
+ ===>  Warning: the  MPS  file and Punch file are on the same unit
+
+ XXX  The bounds on variable      1  are inconsistent.  xlow =  -0.1312854      xupp =  -0.7128542E-01
+
+ XXX  The bounds on variable      7  are inconsistent.  xlow =    1.000000      xupp =    1.300000
+
+ XXX  The bounds on variable      8  are inconsistent.  xlow =   0.5547232E-01  xupp =   0.6779950E-01
+
+ XXX  The bounds on variable      9  are inconsistent.  xlow =   0.1075847      xupp =   0.1613771
+
+ XXX  The bounds on variable     40  are inconsistent.  xlow =  -0.2363574      xupp =  -0.1763574
+
+ XXX  The bounds on variable     41  are inconsistent.  xlow =  -0.9074444E-01  xupp =  -0.3074444E-01
+
+ XXX  The bounds on variable     46  are inconsistent.  xlow =    1.000000      xupp =    1.200000
+
+ XXX  The bounds on variable     47  are inconsistent.  xlow =   0.1582708      xupp =   0.2374062
+
+ XXX  The bounds on variable     48  are inconsistent.  xlow =   0.3152659      xupp =   0.4728989
+
+ XXX  The bounds on variable     79  are inconsistent.  xlow =    1.146710      xupp =    2.717507
+
+ XXX  The equal bounds on variable     81  are infinite.   Bounds =    1.000000      infBnd =   0.6945333-309
+
+ XXX  The bounds on variable     82  are inconsistent.  xlow =   0.2758421      xupp =   0.5122782
+
+ XXX  Invalid arguments xlow, xupp:     12 inconsistent bounds or infinite equal bounds.
+
+ SNOPTA EXIT  90 -- input arguments out of range
+ SNOPTA INFO  91 -- invalid input argument
