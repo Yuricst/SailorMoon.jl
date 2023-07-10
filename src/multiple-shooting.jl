@@ -548,6 +548,7 @@ function x2time_series(
     u  = []
     t  = []
     th = []
+    th0 = []
 
     x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale)
 
@@ -557,7 +558,8 @@ function x2time_series(
     for sol_ballistic in sols_ballistic
         u = sol_ballistic.u[:]
         t = sol_ballistic.t[:]
-        th = [[0,0,0] for i in collect(1:size(u,1))]
+        th  = [[0,0,0] for i in collect(1:size(u,1))]
+        th0 = [[0,0,0] for i in collect(1:size(u,1))]
 
     end
     
@@ -601,10 +603,13 @@ function x2time_series(
 
             end
 
-            th_append = get_thrust(t_append, u_append, thrust_angle, θm_lpo, dir_func)
-            u  = vcat(u, u_append)
-            t  = vcat(t, t_append)
-            th = vcat(th, th_append)
+            th_append  = get_thrust(t_append, u_append, thrust_angle, θm_lpo, dir_func)
+            th0_append = get_thrust(t_append, u_append, [1.0, 0.0, 0.0], θm_lpo, dir_func)
+
+            u   = vcat(u, u_append)
+            t   = vcat(t, t_append)
+            th  = vcat(th, th_append)
+            th0 = vcat(th0, th0_append)
 
         end
         
@@ -613,8 +618,9 @@ function x2time_series(
     u = Base.Array(u)
     u = hcat(u...)[:,:]
     th = hcat(th...)
+    th0 = hcat(th0...)
 
-    return t, u, th
+    return t, u, th, th0
 end
 
 # thrust_param: [τ, γ, β]

@@ -144,7 +144,7 @@ function dv_maxJC_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Floa
     τ, γ, β = p[1], p[2], p[3]
 
     # change into EMrot fram 
-    state_EMrot = transform_SunB1_to_EMrot(state0, θ, ωm, as)
+    state_EMrot = transform_SunB1_to_EMrot(state0[1:6], θ, ωm, as)
 
     dir_EMrot = -state_EMrot[4:6]
     vec = vcat(dir_EMrot, [0.0,0.0,0.0])
