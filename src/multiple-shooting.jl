@@ -422,7 +422,7 @@ function multishoot_trajectory4(
         svf_lpo[1:2] - svf_mid_fwd[1:2],
         svf_lpo[4:5] - svf_mid_fwd[4:5],
         svf_lpo[7] - svf_mid_fwd[7],
-        peri_cond, tof_cond, dep_LEO)[:]
+        peri_cond, dep_LEO, tof_cond)[:]
 
     # println(res)
     # output
@@ -452,10 +452,10 @@ function multishoot_trajectory5(
     # unpack decision vector
     x_lr, x_mid, x_LPO, tofs, θs = unpack_x2(x, param_multi.n_arc, false, scale)
 
-    println("x_lr: ", x_lr)
-    println("x_mind: ", x_mid)
-    println("x_LPO: ", x_LPO)
-    println("tofs: ", tofs)
+    # println("x_lr: ", x_lr)
+    # println("x_mind: ", x_mid)
+    # println("x_LPO: ", x_LPO)
+    # println("tofs: ", tofs)
 
     # initialize storage
     sol_param_list = []
@@ -526,7 +526,7 @@ function multishoot_trajectory5(
         svf_lpo[1:2] - svf_mid_fwd[1:2],
         svf_lpo[4:5] - svf_mid_fwd[4:5],
         svf_lpo[7] - svf_mid_fwd[7],
-        peri_cond, m_leo_cond, dep_LEO)[:]
+        peri_cond, dep_LEO, m_leo_cond)[:]
 
     # output
     if get_sols == false

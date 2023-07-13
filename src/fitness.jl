@@ -248,6 +248,7 @@ function get_fitness4_minmleo_fixToF(
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
+    ug[end] = tof
 
     return fitness!, ng, lg, ug, eval_sft
 end
@@ -259,7 +260,7 @@ function get_fitness5_minToF_fixmleo(
     dir_func,
     param_multi::multishoot_params,
     x, 
-    mf, 
+    mleo, 
     scale::Bool=true
 )
     # number of constraints: 7 states (pos,vel,mass) * 2 
@@ -268,7 +269,7 @@ function get_fitness5_minToF_fixmleo(
     # function that computes constraints of SFT
     eval_sft = function (x::AbstractVector{T}) where T
         # unpack decision vector & residual
-        res = multishoot_trajectory5(x, dir_func, param_multi, mf, false, false, scale) 
+        res = multishoot_trajectory5(x, dir_func, param_multi, mleo, false, false, scale) 
         
         # compute constraints
         # residuals = ForwardDiff.Dual[0 for i = 1:ng]   # initialize (for AD)
@@ -306,6 +307,7 @@ function get_fitness5_minToF_fixmleo(
 
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
+    lg[end] = 1 - mleo
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
 
     return fitness!, ng, lg, ug, eval_sft

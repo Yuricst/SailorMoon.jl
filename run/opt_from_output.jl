@@ -42,7 +42,7 @@ sn_options = Dict(
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 400,
     "Major print level" => 1,
-    "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2
+    "Major step limit" => 0.001,   # 0.1 - 0.01? # default; 2
     "central difference interval" => 1e-6
     # "printfile" => "snopt_print.out",
 )
@@ -79,7 +79,7 @@ sol, _, _  = sol_list[1]
 m_leo = sol[end, end]
 println("m_leo; ", round(m_leo, digits=4))
 
-# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness5_minToF_fixmleo(dir_func, paramMulti, x0, m_leo)
+# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness5_minToF_fixmleo(dir_func, paramMulti, x0, m_leo, true)
 fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness4_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs), true)
 
 # checking if the initial guess is good enough
