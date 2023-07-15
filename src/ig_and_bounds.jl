@@ -207,7 +207,6 @@ function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64, scale::Bool=false)
     lx = vcat(lx_lr, lx_mid, lx_lpo)
     ux = vcat(ux_lr, ux_mid, ux_lpo)
 
-
     return x0, lx, ux
 end
 
