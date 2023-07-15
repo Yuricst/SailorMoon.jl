@@ -604,7 +604,12 @@ function x2time_series(
             end
 
             th_append  = get_thrust(t_append, u_append, thrust_angle, θm_lpo, dir_func)
-            th0_append = get_thrust(t_append, u_append, [1.0, 0.0, 0.0], θm_lpo, dir_func)
+
+            if j == 1 || j == 5
+                th0_append = get_thrust(t_append, u_append, [0.0, 0.0, 0.0], θm_lpo, dir_func)
+            else
+                th0_append = get_thrust(t_append, u_append, [1.0, 0.0, 0.0], θm_lpo, dir_func)
+            end
 
             u   = vcat(u, u_append)
             t   = vcat(t, t_append)
