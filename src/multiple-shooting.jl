@@ -416,13 +416,13 @@ function multishoot_trajectory4(
 
     # residuals    
     res = vcat(
-        svf_mid_bck[1:2] - svf_lr_fwd[1:2],
-        svf_mid_bck[4:5] - svf_lr_fwd[4:5],
+        (svf_mid_bck[1:2] - svf_lr_fwd[1:2])/10,
+        (svf_mid_bck[4:5] - svf_lr_fwd[4:5])/10,
         svf_mid_bck[7] - svf_lr_fwd[7],
-        svf_lpo[1:2] - svf_mid_fwd[1:2],
-        svf_lpo[4:5] - svf_mid_fwd[4:5],
+        (svf_lpo[1:2] - svf_mid_fwd[1:2])/10,
+        (svf_lpo[4:5] - svf_mid_fwd[4:5])/10,
         svf_lpo[7] - svf_mid_fwd[7],
-        peri_cond, dep_LEO, tof_cond)[:]
+        peri_cond/10, dep_LEO/10, tof_cond/10)[:]
 
     # println(res)
     # output

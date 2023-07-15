@@ -13,9 +13,9 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0618_maxJCThrust2.csv"
-dir_func = SailorMoon.dv_maxJC_dir_sb1frame
-output_fname = "data/opt_0618_maxJCThrust.csv"
+filename = "data/diffcorr_0619_TidalThrust2.csv"
+dir_func = SailorMoon.dv_tidal_dir_sb1frame
+output_fname = "data/opt_0619_tidalThrust.csv"
 optim_solver = "snopt"
 ## =============================================================
 
@@ -40,7 +40,7 @@ sn_options = Dict(
     "Major feasibility tolerance" => 1.e-6,
     "Major optimality tolerance"  => 1.e-4,
     "Minor feasibility tolerance" => 1.e-6,
-    "Major iterations limit" => 400,
+    "Major iterations limit" => 1000,
     "Major print level" => 1,
     "Major step limit" => 0.001,   # 0.1 - 0.01? # default; 2
     "central difference interval" => 1e-6
@@ -62,7 +62,7 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-id = 2
+id = 31
 row =df[id,:]
 row = Float64.(collect(row))
 
@@ -87,7 +87,7 @@ res = eval_sft(x0)
 # println("ub - x0: ", ux - x0)
 # println("x0 - lb: ", x0 - lx)
 # println("ub - lb; ", ux-lx)
-println("residual (needs to be 0): ", [round(el,digits=3) for el in res])
+println("residual (needs to be 0): ", [round(el,digits=5) for el in res])
 
 if optim_solver == "ipopt"
     xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
@@ -106,7 +106,7 @@ end
 
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
-vec = vcat(id, fixed_tof, xopt[7], xopt)  # tof, m_leo
+vec = vcat(row[1], fixed_tof, xopt[7], xopt)  # tof, m_leo
 CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append=true)
 
 println(Info)

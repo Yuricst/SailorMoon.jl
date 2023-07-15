@@ -248,7 +248,7 @@ function get_fitness4_minmleo_fixToF(
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
-    ug[end] = tof
+    # ug[end] = tof
 
     return fitness!, ng, lg, ug, eval_sft
 end
@@ -307,7 +307,7 @@ function get_fitness5_minToF_fixmleo(
 
     # problem bounds
     lg = [0.0 for idx=1:ng]   # lower bounds on constraints
-    lg[end] = 1 - mleo
+    # lg[end] = 1 - mleo
     ug = [0.0 for idx=1:ng]   # upper bounds on constraints
 
     return fitness!, ng, lg, ug, eval_sft
