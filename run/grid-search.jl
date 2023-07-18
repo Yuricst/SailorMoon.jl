@@ -336,7 +336,7 @@ ensemble_prob = EnsembleProblem(prob, prob_func=prob_func)
 
 sim = solve(ensemble_prob, AutoTsit5(Rosenbrock23()), EnsembleThreads(); trajectories=length(grids),
             callback=cbs, reltol=1e-12, abstol=1e-12,
-            save_everystep=false);
+            save_everystep=true);
 tofs = [sol.t[end] for sol in sim]
 
 # sim = solve(ensemble_prob, RK4(),  dt=0.005, adaptive=false, EnsembleThreads(), trajectories=length(grids),

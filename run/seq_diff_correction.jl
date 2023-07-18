@@ -1,75 +1,76 @@
-using Distributed
+# using Distributed
 
-@everywhere begin
+# @everywhere begin
 
-    using ForwardDiff
-    using Suppressor
-    using CSV
-    using DataFrames
-    using LinearAlgebra
-    using Printf
-    using Base.Threads
+using ForwardDiff
+using Suppressor
+using CSV
+using DataFrames
+using LinearAlgebra
+using Printf
+using Base.Threads
 
-    push!(LOAD_PATH,"../../joptimise/src/")
-    using joptimise
+push!(LOAD_PATH,"../../joptimise/src/")
+using joptimise
 
-    include("../src/SailorMoon.jl")
+include("../src/SailorMoon.jl")
 
-    ## === INPUTS ==================================================
-    # csv file to load the initial solution
-    filename = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
-    dir_func = SailorMoon.dv_tidal_dir_sb1frame
-    output_fname = "data/diffcorr_0717_tidalThrust.csv"
-    optim_solver = "snopt"
-    ## =============================================================
+## === INPUTS ==================================================
+# csv file to load the initial solution
+filename = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
+dir_func = SailorMoon.dv_tidal_dir_sb1frame
+output_fname = "data/diffcorr_0717_tidalThrust.csv"
+optim_solver = "snopt"
+## =============================================================
 
-    # 3body parameter
-    param3b = SailorMoon.dynamics_parameters()
+# 3body parameter
+param3b = SailorMoon.dynamics_parameters()
 
-    # multiple shooting parameter
-    paramMulti = SailorMoon.multi_shoot_parameters(param3b)
-
-
-    # run minimizer with IPOPT
-    ip_options = Dict(
-        "max_iter" => 100,   # 1500 ~ 2500
-        "tol" => 1e-4,
-        "constr_viol_tol" => 1e-6,
-        "dual_inf_tol" => 1e-1,
-        "output_file" => "ELET_ipopt.out",
-        "mu_strategy" => "adaptive",
-        "acceptable_constr_viol_tol" => 1e-4,
-        "print_level" => 0,
-    )
-
-    sn_options = Dict(
-        "Major feasibility tolerance" => 1.e-6,
-        "Major optimality tolerance"  => 1.e-1,
-        "Minor feasibility tolerance" => 1.e-6,
-        "Major iterations limit" => 50,
-        "Major print level" => 1,
-        # "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
-        # "linesearch tolerance" => 0.95, 
-        "printfile" => "snopt_opt.out",
-    )
+# multiple shooting parameter
+paramMulti = SailorMoon.multi_shoot_parameters(param3b)
 
 
-    # ===============================================================
+# run minimizer with IPOPT
+ip_options = Dict(
+    "max_iter" => 100,   # 1500 ~ 2500
+    "tol" => 1e-4,
+    "constr_viol_tol" => 1e-6,
+    "dual_inf_tol" => 1e-1,
+    "output_file" => "ELET_ipopt.out",
+    "mu_strategy" => "adaptive",
+    "acceptable_constr_viol_tol" => 1e-4,
+    "print_level" => 0,
+)
 
-    if dir_func == SailorMoon.dv_no_thrust
-        τ_ig = 0.0
-    else 
-        τ_ig = 1.0
-    end
+sn_options = Dict(
+    "Major feasibility tolerance" => 1.e-6,
+    "Major optimality tolerance"  => 1.e-1,
+    "Minor feasibility tolerance" => 1.e-6,
+    "Major iterations limit" => 50,
+    "Major print level" => 1,
+    # "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
+    # "linesearch tolerance" => 0.95, 
+    "printfile" => "snopt_opt.out",
+)
 
-    # load initial guess ( "grid_serach_XXX.csv" )
-    df = DataFrame(CSV.File(filename))
-    df = df[692:end, :]
-    height = size(df,1)
+
+# ===============================================================
+
+if dir_func == SailorMoon.dv_no_thrust
+    τ_ig = 0.0
+else 
+    τ_ig = 1.0
 end
 
+# load initial guess ( "grid_serach_XXX.csv" )
+df = DataFrame(CSV.File(filename))
+# df = df[692:end, :]
+height = size(df,1)
+# end
+
 # for (m, row) in enumerate( eachrow( df ) ) 
-@distributed for m in collect(1:height)
+# @distributed for m in collect(1:height)
+for m in collect(1:height)
     row = df[m,:]
 
     # row = df[3,:]
