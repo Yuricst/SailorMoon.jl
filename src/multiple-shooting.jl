@@ -605,7 +605,7 @@ function x2time_series(
 
             th_append  = get_thrust(t_append, u_append, thrust_angle, θm_lpo, dir_func)
 
-            if j == 1 || j == 5
+            if j == 5
                 th0_append = get_thrust(t_append, u_append, [0.0, 0.0, 0.0], θm_lpo, dir_func)
             else
                 th0_append = get_thrust(t_append, u_append, [1.0, 0.0, 0.0], θm_lpo, dir_func)
