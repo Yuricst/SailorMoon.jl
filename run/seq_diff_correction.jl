@@ -17,9 +17,9 @@ using Distributed
 
     ## === INPUTS ==================================================
     # csv file to load the initial solution
-    filename = "data/grid_search_Tsit5_0613_velThrust.csv"
-    dir_func = SailorMoon.dv_vel_dir_sb1frame
-    output_fname = "data/diffcorr_0618_velThrust.csv"
+    filename = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
+    dir_func = SailorMoon.dv_tidal_dir_sb1frame
+    output_fname = "data/diffcorr_0717_tidalThrust.csv"
     optim_solver = "snopt"
     ## =============================================================
 
@@ -48,6 +48,8 @@ using Distributed
         "Minor feasibility tolerance" => 1.e-6,
         "Major iterations limit" => 50,
         "Major print level" => 1,
+        # "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
+        # "linesearch tolerance" => 0.95, 
         "printfile" => "snopt_opt.out",
     )
 

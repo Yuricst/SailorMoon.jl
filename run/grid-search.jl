@@ -22,9 +22,9 @@ using Distributed
 
     ## ====== something you want to change =====================
     
-    out_fname = "data/grid_search_Tsit5_0703_drpdt_Thrust.csv"
-    dv_fun = SailorMoon.dv_max_drpdt_dir_sb1frame
-        
+    out_fname = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
+    dv_fun = SailorMoon.dv_tidal_dir_sb1frame
+
     ## =========================================================
 
     param3b = SailorMoon.dynamics_parameters()
@@ -241,7 +241,7 @@ end
     n = 60
     m = 300
     ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
-    θs_vec   = LinRange(0, 1, n+1)[1:n]  # [0.104719755] [180/180*pi] 
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi]   # this should be 1 but not 2pi!!!!!!!
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -343,7 +343,7 @@ tofs = [sol.t[end] for sol in sim]
 #             callback=cbs,
 #             save_everystep=true);
 
-ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2, xlim=[385,391], ylim=[-3,3])
+ptraj = plot(size=(700,500), frame_style=:box, aspect_ratio=:equal, grid=0.2, xlim=[385,392], ylim=[-3,3])
 # plot!(ptraj, xlims=(385,395), ylims=(-8,8))
 cmap = :viridis
 

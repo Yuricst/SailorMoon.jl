@@ -68,7 +68,8 @@ function dv_tidal_dir_sb1frame(μS::Float64, as::Float64, θ::Float64, ωm::Floa
     # first, obtain the direction in sun-B1 rotating frame
     phi = μS / as^3 * (3 * r*transpose(r) - Matrix{Float64}(I, 3, 3)) * (state0[1:3] - [as, 0,0])
     dir = phi / norm(phi)
-    
+    # println("phi:", dir, "  pos:", state0[1:3] - [as, 0,0])
+
     # add furhter rotation in gamma and beta   
     sin_β = sin(β)
     cos_β = cos(β)
