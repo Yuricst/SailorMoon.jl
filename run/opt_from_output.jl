@@ -13,8 +13,8 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0717_tidalThrust.csv"
-dir_func = SailorMoon.dv_tidal_dir_sb1frame
+filename = "data/diffcorr_0619_EMrotThrust2.csv"
+dir_func = SailorMoon.dv_EMrotdir_sb1frame
 output_fname = "data/opt_0717_EMrotThrust.csv"
 optim_solver = "snopt"
 ## =============================================================
@@ -42,7 +42,7 @@ sn_options = Dict(
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 1000,
     "Major print level" => 1,
-    "Major step limit" => 0.01,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
+    "Major step limit" => 0.001,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
     "linesearch tolerance" => 0.99,   # the heavier the evaluation is, the bigger this value should be 
     "central difference interval" => 1e-6
     # "printfile" => "snopt_print.out",
@@ -63,7 +63,7 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-id = 1
+id = 393
 row =df[id,:]
 row = Float64.(collect(row))
 
@@ -86,7 +86,9 @@ res = eval_sft(x0)
 # println("ub - x0: ", ux - x0)
 # println("x0 - lb: ", x0 - lx)
 # println("ub - lb; ", ux-lx)
-println("residual (needs to be 0): ", [round(el,digits=5) for el in res])
+# println("residual (needs to be 0): ", [round(el,digits=5) for el in res])
+println("residual (needs to be 0): ", res)
+
 
 if optim_solver == "ipopt"
     xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
