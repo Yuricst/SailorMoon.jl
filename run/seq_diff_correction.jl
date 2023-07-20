@@ -17,9 +17,9 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
-dir_func = SailorMoon.dv_tidal_dir_sb1frame
-output_fname = "data/diffcorr_0717_tidalThrust.csv"
+filename = "data/grid_search_Tsit5_0615_EMrotThrust.csv"
+dir_func = SailorMoon.dv_EMrotdir_sb1frame
+output_fname = "data/diffcorr_0717_EMrotThrust_20.csv"
 optim_solver = "snopt"
 ## =============================================================
 
@@ -64,8 +64,9 @@ end
 
 # load initial guess ( "grid_serach_XXX.csv" )
 df = DataFrame(CSV.File(filename))
-# df = df[692:end, :]
+# df = df[394:395, :]
 height = size(df,1)
+height = 2
 # end
 
 # for (m, row) in enumerate( eachrow( df ) ) 
@@ -73,7 +74,7 @@ height = size(df,1)
 for m in collect(1:height)
     row = df[m,:]
 
-    # row = df[3,:]
+    row = df[394,:]
 
     # perform the differential correction only if there is no flyby
 
@@ -107,7 +108,7 @@ for m in collect(1:height)
     elseif optim_solver == "snopt"
         xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
             lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
-            options=sn_options, outputfile=true, lencw=5000, iSumm=6,
+            options=sn_options, outputfile=true, lencw=200000, leniw=100000, lenrw = 150000, iSumm=6,
         )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
     else 

@@ -277,6 +277,49 @@ end
 
 
 
+
+"""
+RV -> COE, if inclination is zero 
+"""
+function rv2coe_inc0(state::Vector, mu::Real)
+
+    rvec = state[1:3]
+    vvec = state[4:6]
+
+    ene = -mu/norm(rvec) + 1/2*norm(vvec)^2
+    a  = -mu/(2*ene)
+
+    hvec = cross(rvec, vvec)
+    eccvec = 1/mu * cross(vvec, hvec) - rvec / norm(rvec)
+    e = norm(eccvec)
+
+    # angle between x-axis and periapsis 
+    omega = atan(eccvec[2], eccvec[1])
+
+    f = acos(dot(eccvec, rvec) / (norm(eccvec)*norm(rvec)))
+    if dot(rvec, vvec) < 0
+        f = -f 
+    end 
+    
+    return [a, e, omega, f]
+
+end
+
+
+
+function mod_custom(a, n)
+    return a - floor(a / n) * n
+end
+
+
+function angle_difference(ϕ_fwd::Real, ϕ_bck::Real)
+    # modulo based
+    dϕ = mod_custom((ϕ_bck - ϕ_fwd + π), 2π) - π
+    return dϕ
+end
+
+
+
 # """
 # 	keplerian_to_cartesian(x_oe::Array{<:Real,1}, μ::Real)
 

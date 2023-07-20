@@ -20,7 +20,7 @@ function multi_shoot_parameters(param3b::dynamics_params)
     mdot_si = tmax_si / (isp_si * 9.81)
     mstar = 2500  # kg
     dt    = 0.005
-    n_arc = 5
+    n_arc = 20
 
     ballistic_time      = 1 * 86400 / param3b.tstar
     ballistic_time_back = 10 * 86400 / param3b.tstar
@@ -179,12 +179,12 @@ function get_LPO_state(x_LPO, θs, param_multi::multishoot_params, verbose::Bool
     # sol_ballistic_bck = integrate_rk4(_prob, 0.001);
     sol_ballistic_bck = solve(_prob, Tsit5(); reltol=1e-12, abstol=1e-12);
 
-    θ_iter = θs[3] - param3b.oms * param_multi.ballistic_time_back
+    θs_iter = θs[3] - param3b.oms * param_multi.ballistic_time_back
 
     if verbose
         println("svf_sunb1: \n", svf_sunb1)
     end
-    return sol_ballistic_bck.u[end], θ_iter, sol_ballistic_bck
+    return sol_ballistic_bck.u[end], θs_iter, sol_ballistic_bck
 end
 
 function propagate_arc!(sv0, θ0, tspan, x_control, dir_func, param_multi::multishoot_params, get_sols::Bool, sol_param_list, name::String)
@@ -397,7 +397,7 @@ function multishoot_trajectory4(
 
     # periapsis 
     alt = (6375 + 500) / param3b.lstar
-    θs0 = θs[end] - param3b.oms * sum(tofs)
+    θs0 = θs[end] - param3b.oms * sum(tofs)  # at LEO 
     θe0 = 2*pi - θs0    # earth angle at LEO
     sc_earth = [
         svf_lr_bck[1] - (param3b.as + param3b.mu2*cos(θe0)),
@@ -414,15 +414,43 @@ function multishoot_trajectory4(
     dep_LEO = sc_earth[1]*svf_lr_bck[4] + sc_earth[2]*svf_lr_bck[5] + sc_earth[3]*svf_lr_bck[6]
     # dep_LEO = 0.0
 
+
+    # conver the match point into the orbital elements 
+    θm_svf_lpo     = (pi - θs[end]) - tofs[5] * param3b.oml  
+    θm_svf_mid_fwd = (pi - θs[2])   + tofs[4] * param3b.oml
+    svf_lpo_Eine = transform_sb1_to_EearthIne(svf_lpo[1:6], θm_svf_lpo, param3b.oml, param3b.mu2, param3b.as)
+    svf_mid_fwd_Eine = transform_sb1_to_EearthIne(svf_mid_fwd[1:6], θm_svf_mid_fwd, param3b.oml, param3b.mu2, param3b.as)
+
+    svf_lpo_coe = rv2coe_inc0(svf_lpo_Eine, param3b.mu1)
+    svf_mid_fwd_coe = rv2coe_inc0(svf_mid_fwd_Eine, param3b.mu1)
+
+
+
+    angle_difference(svf_lpo_coe[3], svf_mid_fwd_coe[3])
+    angle_difference(svf_lpo_coe[4], svf_mid_fwd_coe[4])
+
+
+
     # residuals    
+    # res = vcat(
+    #     (svf_mid_bck[1:2] - svf_lr_fwd[1:2])/10,
+    #     (svf_mid_bck[4:5] - svf_lr_fwd[4:5])/10,
+    #     svf_mid_bck[7] - svf_lr_fwd[7],
+    #     (svf_lpo[1:2] - svf_mid_fwd[1:2])/10,
+    #     (svf_lpo[4:5] - svf_mid_fwd[4:5])/10,
+    #     svf_lpo[7] - svf_mid_fwd[7],
+    #     peri_cond/10, dep_LEO/10, tof_cond/10)[:]
+
     res = vcat(
         (svf_mid_bck[1:2] - svf_lr_fwd[1:2])/10,
         (svf_mid_bck[4:5] - svf_lr_fwd[4:5])/10,
         svf_mid_bck[7] - svf_lr_fwd[7],
-        (svf_lpo[1:2] - svf_mid_fwd[1:2])/10,
-        (svf_lpo[4:5] - svf_mid_fwd[4:5])/10,
+        svf_lpo_coe[1:2] - svf_mid_fwd_coe[1:2],
+        angle_difference(svf_lpo_coe[3], svf_mid_fwd_coe[3]),
+        angle_difference(svf_lpo_coe[4], svf_mid_fwd_coe[4]),    
         svf_lpo[7] - svf_mid_fwd[7],
         peri_cond/10, dep_LEO/10, tof_cond/10)[:]
+
 
     # println(res)
     # output

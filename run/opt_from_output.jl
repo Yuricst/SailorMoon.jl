@@ -13,9 +13,9 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0619_EMrotThrust2.csv"
+filename = "data/diffcorr_0717_EMrotThrust_20.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
-output_fname = "data/opt_0717_EMrotThrust.csv"
+output_fname = "data/opt_0717_EMrotThrust_20.csv"
 optim_solver = "snopt"
 ## =============================================================
 
@@ -63,8 +63,8 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-id = 393
-row =df[id,:]
+id = 1
+row =df[1,:]
 row = Float64.(collect(row))
 
 x0, lx, ux = SailorMoon.make_ig_bounds2_raw(row, τ_ig, paramMulti.n_arc, true)
@@ -98,7 +98,7 @@ if optim_solver == "ipopt"
 elseif optim_solver == "snopt"
     xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
         lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
-        options=sn_options, outputfile=true, lencw=100000, iSumm=6
+        options=sn_options, outputfile=true, lencw=200000, iSumm=6
     )  #  derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 else 
