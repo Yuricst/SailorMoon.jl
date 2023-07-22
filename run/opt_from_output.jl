@@ -14,7 +14,7 @@ include("../src/SailorMoon.jl")
 ## === INPUTS ==================================================
 # csv file to load the initial solution
 # filename  = "../run/data/diffcorr_0717_TidalThrust.csv"
-# output_fname = "../run/data/opt_0717_EMrotThrust.csv"
+# output_fname = "../run/data/opt_0717_TidalThrust.csv"
 # dir_func = SailorMoon.dv_tidal_dir_sb1frame
 # solid = 1
 
@@ -30,7 +30,7 @@ include("../src/SailorMoon.jl")
 # dir_func = SailorMoon.dv_maxJC_dir_sb1frame
 # solid = 327
 
-filename  = "../run/data/diffcorr_0717_EMrotThrust.csv"
+filename  = "../run/data/diffcorr_0619_EMrotThrust2.csv"
 output_fname = "../run/data/opt_0619_EMrotThrust.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
 solid  = 394
@@ -62,8 +62,8 @@ sn_options = Dict(
     "Major iterations limit" => 1000,
     # "Minor iterations limit" => 30,
     "Major print level" => 1,
-    "Major step limit" => 1e-2 ,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
-    "Linesearch Tolerance" => 0.999,   # the heavier the evaluation is, the bigger this value should be 
+    "Major step limit" => 1e-1 ,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
+    "Linesearch Tolerance" => 0.99,   # the heavier the evaluation is, the bigger this value should be 
     "central difference interval" => 1e-7
     # "printfile" => "snopt_print.out",
 )
@@ -99,8 +99,9 @@ sol, _, _  = sol_list[1]
 m_leo = sol[end, end]
 println("m_leo; ", round(m_leo, digits=4))
 
+fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness2_minToF(dir_func, paramMulti, x0, true)
+# fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness4_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs), true)
 # fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness5_minToF_fixmleo(dir_func, paramMulti, x0, m_leo, true)
-fitness!, ng, lg, ug, eval_sft = SailorMoon.get_fitness4_minmleo_fixToF(dir_func, paramMulti, x0, sum(tofs), true)
 
 # checking if the initial guess is good enough
 res = eval_sft(x0)

@@ -454,12 +454,6 @@ function multishoot_trajectory4(
     svf_mid_fwd_coe = rv2coe_inc0(svf_mid_fwd_Eine, param3b.mu1)
 
 
-
-    angle_difference(svf_lpo_coe[3], svf_mid_fwd_coe[3])
-    angle_difference(svf_lpo_coe[4], svf_mid_fwd_coe[4])
-
-
-
     # residuals    
     # res = vcat(
     #     (svf_mid_bck[1:2] - svf_lr_fwd[1:2])/10,
@@ -577,13 +571,13 @@ function multishoot_trajectory5(
 
     # residuals    
     res = vcat(
-        svf_mid_bck[1:2] - svf_lr_fwd[1:2],
-        svf_mid_bck[4:5] - svf_lr_fwd[4:5],
+        (svf_mid_bck[1:2] - svf_lr_fwd[1:2])/10,
+        (svf_mid_bck[4:5] - svf_lr_fwd[4:5])/10,
         svf_mid_bck[7] - svf_lr_fwd[7],
-        svf_lpo[1:2] - svf_mid_fwd[1:2],
-        svf_lpo[4:5] - svf_mid_fwd[4:5],
+        (svf_lpo[1:2] - svf_mid_fwd[1:2])/10,
+        (svf_lpo[4:5] - svf_mid_fwd[4:5])/10,
         svf_lpo[7] - svf_mid_fwd[7],
-        peri_cond, dep_LEO, m_leo_cond)[:]
+        peri_cond/10, dep_LEO, m_leo_cond)[:]
 
     # output
     if get_sols == false
