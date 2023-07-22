@@ -13,9 +13,28 @@ include("../src/SailorMoon.jl")
 
 ## === INPUTS ==================================================
 # csv file to load the initial solution
-filename = "data/diffcorr_0717_EMrotThrust_20.csv"
+# filename  = "../run/data/diffcorr_0717_TidalThrust.csv"
+# output_fname = "../run/data/opt_0717_EMrotThrust.csv"
+# dir_func = SailorMoon.dv_tidal_dir_sb1frame
+# solid = 1
+
+
+# filename  = "../run/data/diffcorr_0618_velThrust.csv"
+# output_fname = "../run/data/opt_0618_velThrust.csv"
+# dir_func = SailorMoon.dv_vel_dir_sb1frame
+# solid = 835
+
+
+# filename  = "../run/data/diffcorr_0618_maxJCThrust2.csv"
+# output_fname = "../run/data/opt_0618_maxJCThrust.csv"
+# dir_func = SailorMoon.dv_maxJC_dir_sb1frame
+# solid = 327
+
+filename  = "../run/data/diffcorr_0717_EMrotThrust.csv"
+output_fname = "../run/data/opt_0619_EMrotThrust.csv"
 dir_func = SailorMoon.dv_EMrotdir_sb1frame
-output_fname = "data/opt_0717_EMrotThrust_20.csv"
+solid  = 394
+
 optim_solver = "snopt"
 ## =============================================================
 
@@ -38,13 +57,14 @@ ip_options = Dict(
 
 sn_options = Dict(
     "Major feasibility tolerance" => 1.e-6,
-    "Major optimality tolerance"  => 1.e-4,
+    "Major optimality tolerance"  => 1.e-3,
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 1000,
+    # "Minor iterations limit" => 30,
     "Major print level" => 1,
-    "Major step limit" => 0.001,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
-    "linesearch tolerance" => 0.99,   # the heavier the evaluation is, the bigger this value should be 
-    "central difference interval" => 1e-6
+    "Major step limit" => 1e-2 ,   # 0.1 - 0.01? # default; 2,  0.001 ;looks working in general 
+    "Linesearch Tolerance" => 0.999,   # the heavier the evaluation is, the bigger this value should be 
+    "central difference interval" => 1e-7
     # "printfile" => "snopt_print.out",
 )
 
@@ -63,8 +83,9 @@ end
 df = CSV.read(filename, DataFrame; header=0);
 
 # maybe want to use "for row in eachrow(df)" to automate the process...? 
-id = 1
-row =df[1,:]
+position = findall( x -> x == solid, df[:,1])
+# println(position)
+row = df[position[1],:]
 row = Float64.(collect(row))
 
 x0, lx, ux = SailorMoon.make_ig_bounds2_raw(row, τ_ig, paramMulti.n_arc, true)
@@ -90,20 +111,15 @@ res = eval_sft(x0)
 println("residual (needs to be 0): ", res)
 
 
-if optim_solver == "ipopt"
-    xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
-    lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
-    options=ip_options, outputfile=true,
-    )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
-elseif optim_solver == "snopt"
-    xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
-        lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
-        options=sn_options, outputfile=true, lencw=200000, iSumm=6
-    )  #  derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
+# xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+#     lx=lx, ux=ux, lg=lg, ug=ug, solver="ipopt",
+#     options=ip_options, outputfile=true,
+#     )  # derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
-else 
-    error("optim_solver needs to be ipopt or snopt")
-end
+xopt, fopt, Info = joptimise.minimize(fitness!, x0, ng;
+    lx=lx, ux=ux, lg=lg, ug=ug, solver="snopt",
+    options=sn_options, outputfile=true, lencw=10000, iSumm=6
+    )  #  derivatives=joptimise.UserDeriv());  # to use AD, need this additional parameter...
 
 
 fixed_tof = xopt[8] + xopt[9] + xopt[17+6*paramMulti.n_arc] + xopt[18+6*paramMulti.n_arc] + xopt[22+12*paramMulti.n_arc]
@@ -112,6 +128,8 @@ CSV.write(output_fname,  Tables.table(transpose(vec)), writeheader=false, append
 
 println(Info)
 println(x0)
+
+
 # println("Now, using the initial guess, we reoptimize...")
 
 # while true

@@ -20,7 +20,7 @@ function multi_shoot_parameters(param3b::dynamics_params)
     mdot_si = tmax_si / (isp_si * 9.81)
     mstar = 2500  # kg
     dt    = 0.005
-    n_arc = 20
+    n_arc = 5
 
     ballistic_time      = 1 * 86400 / param3b.tstar
     ballistic_time_back = 10 * 86400 / param3b.tstar
@@ -70,8 +70,8 @@ function unpack_x2(x::AbstractVector{T}, n_arc::Int, verbose::Bool=false, scale:
         x_mid[1]   = x_mid[1] + param3b.as
 
         # time 
-        x_lr[8:9]  = x_lr[8:9] * factor
-        x_mid[8:9] = x_mid[8:9] * factor
+        x_lr[8:9]  = x_lr[8:9] * factort
+        x_mid[8:9] = x_mid[8:9] * factort
         x_LPO[4]   = x_LPO[4] *factort   # lpo => mid direction tof
 
         # println("variables are scaled!")
@@ -119,6 +119,35 @@ function oldx2newx(x, n_arc)
     
     xnew = vcat(x_lr, x_mid, x_LPO)
 
+    return xnew
+
+end
+
+
+function newx2oldx(x, n_arc)
+    factor = 10
+
+    # unpack
+    nx = length(x)
+    x_lr  = x[1 : 9+6*n_arc]
+    x_mid = x[10+6*n_arc : 18+12*n_arc]    # x[5+3n_arc:4+3n_arc+9+6n_arc]
+    x_LPO = x[19+12*n_arc : 22+15*n_arc]  # x[14+9n_arc:13+9n_arc+4+3n_arc]
+
+    # length 
+
+    x_lr[1:6]  = x_lr[1:6]  * factor
+    x_mid[1:6] = x_mid[1:6] * factor
+    x_lr[1]    = x_lr[1]  + param3b.as
+    x_mid[1]   = x_mid[1] + param3b.as
+
+    # time
+    x_lr[8:9]  = x_lr[8:9] * factor
+    x_mid[8:9] = x_mid[8:9] * factor
+    x_LPO[4]   = x_LPO[4]  * factor
+
+    xold = vcat(x_lr, x_mid, x_LPO)
+
+    return xold
 
 end
 
@@ -449,7 +478,7 @@ function multishoot_trajectory4(
         angle_difference(svf_lpo_coe[3], svf_mid_fwd_coe[3]),
         angle_difference(svf_lpo_coe[4], svf_mid_fwd_coe[4]),    
         svf_lpo[7] - svf_mid_fwd[7],
-        peri_cond/10, dep_LEO/10, tof_cond/10)[:]
+        peri_cond, dep_LEO/10, tof_cond/10)[:]
 
 
     # println(res)

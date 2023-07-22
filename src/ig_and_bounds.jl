@@ -10,7 +10,6 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64, scale::Bool=false)
     # change the coordinates into cylindrical (only position)
     # svm_mid_cyl = vcat(cart2cylind_only_pos(sv_mid_cart), row.m_ra)
 
-
     tof_leo2mid = row.dt2
     tof_mid2lpo = row.dt1
     m_rp  = row.m_rp
@@ -72,7 +71,7 @@ function make_ig_bounds2(row, τ_ig, n_arc::Int64, scale::Bool=false)
     ### lb, ub of variables 
     # for the lyapunov orbit, everything is 2D, so just set β=0 in [τ, γ, β]
 
-    dstate = 0.3 / factor 
+    dstate = 0.5 / factor 
 
     lx_lr = vcat(
         ig_x_lr[1] - dstate, ig_x_lr[2] - dstate, 0.0, -1.5/factor, -1.5/factor, -0.0, 1.0,
@@ -118,10 +117,17 @@ end
     The input row[3:end] is the raw variable of x0,x1,...xN.
     used in opt_from_output.jl
 """
-function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64, scale::Bool=false)
+function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64, scale::Bool=false, scale_up::Int64=0)
 
     x0 = collect(values(row[4:end])) 
+    x0 = convert(Vector{Float64}, x0)
+    # println(typeof(x0))
 
+    if scale_up >0
+        x0 = newx2oldx(x0, n_arc)
+    end
+
+    
     # svm_mid_cyl = x0[10+6*n_arc:16+6*n_arc]
 
     tof_leo2mid0 = x0[8]   # leo -> lr direction tof 
@@ -196,11 +202,11 @@ function make_ig_bounds2_raw(row, τ_ig, n_arc::Int64, scale::Bool=false)
     )
 
     lx_lpo = vcat(
-        [θsf-pi/4, ϕ0-pi/4, 1.000, 0.7*tof_mid2lpo2/factort],
+        [θsf-pi, ϕ0-pi, 1.000, 0.7*tof_mid2lpo2/factort],
         vcat([[0.0,-pi,0.0] for i = 1:n_arc]...)
     )
     ux_lpo = vcat(
-        [θsf+pi/4, ϕ0+pi/4, 1.000, 1.3*tof_mid2lpo2/factort],
+        [θsf+pi, ϕ0+pi, 1.000, 1.3*tof_mid2lpo2/factort],
         vcat([[1.0,pi,0.0] for i = 1:n_arc]...)
     )
 
