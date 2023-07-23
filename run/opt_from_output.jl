@@ -57,7 +57,7 @@ ip_options = Dict(
 
 sn_options = Dict(
     "Major feasibility tolerance" => 1.e-6,
-    "Major optimality tolerance"  => 1.e-3,
+    "Major optimality tolerance"  => 1.e-4,
     "Minor feasibility tolerance" => 1.e-6,
     "Major iterations limit" => 1000,
     # "Minor iterations limit" => 30,
