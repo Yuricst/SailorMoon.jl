@@ -222,7 +222,7 @@ end
 
     ## set up of initial condition (Lyapunov orbit)
     lp = 2
-    Az_km = 0.0
+    Az_km = 1200.0
     println("Halo guess Az_km: $Az_km")
     northsouth = 3   # 1 or 3
     guess0 = R3BP.halo_analytical_construct(param3b.mu2, lp, Az_km, param3b.lstar, northsouth)
