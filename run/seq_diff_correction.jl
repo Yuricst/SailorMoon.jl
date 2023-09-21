@@ -159,7 +159,7 @@ for m in collect(1:height)
     #         println("Optimization couldn't succeed. Terminated... ")
     #         break
     #     end
-    end
+    # end
 
 end
 
