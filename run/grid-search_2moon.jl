@@ -19,13 +19,13 @@ using Distributed
     include("../src/SailorMoon.jl")
     include("../../julia-r3bp/R3BP/src/R3BP.jl")
 
-
     ## ====== something you want to change =====================
     
     out_fname = "data/grid_search_Tsit5_0717_tidal_Thrust.csv"
-    dv_fun = SailorMoon.dv_tidal_dir_sb1frame
+    dv_fun = SailorMoon.dv_EMrotdir_sb1frame
 
     ## =========================================================
+
 
     param3b = SailorMoon.dynamics_parameters()
 
@@ -130,7 +130,6 @@ using Distributed
 
     # count the lunar radius crossing but not flyby
     function lunar_radius_cond2(u,t,int)
-        
         # pick up if SC get closer to the lunar SMA in S-B1 frame (consider the SOI of the moon 
         # so that we can avoid the integration "skipping" the r < lunar raidus domain)
         if abs(t) < 5  
@@ -155,18 +154,15 @@ using Distributed
             
             # moon-SC distance
             r = sqrt((u[1] - param3b.as - (1-param3b.mu2)*cos(θm))^2 + (u[2] - (1-param3b.mu2)*sin(θm)) ^2 + u[3]^2)
-            moon_soi = 66100 / param3b.lstar
+            moon_soi = 66100 / param3b.lstar  # ~= 0.15
             v_moon   = (1-param3b.mu2)*param3b.oml * [-sin(θm), cos(θm), 0] 
             
-            # strict perilune condition
-            # if r < moon_soi #&& -t > (10*86400 / param3b.tstar)
-            #     return dot([u[1] - param3b.as - (1-param3b.mu2) * cos(θm), u[2] - (1-param3b.mu2) * sin(θm), u[3]], u[4:6]-v_moon)
-            # else 
-            #     return NaN
-            # end
-
-            # check when the SC passes the boundary of the lunar SOI
-            return moon_soi - r
+            # check when the SC is inside the lunar SOI
+            if moon_soi - r > 0 
+                return dot([u[1] - param3b.as - (1-param3b.mu2) * cos(θm), u[2] - (1-param3b.mu2) * sin(θm), u[3]], u[4:6]-v_moon)
+            else 
+                return NaN 
+            end
         # else 
             # return NaN
         # end
@@ -195,6 +191,21 @@ using Distributed
         r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  # earth-SC distance 
         return (r - earth_leo_lb*0.8) * (r - 8)  # terminate if it's too close to Earth, and remove if it's too far from Earth
     end
+
+    function inside_lunar_radius_cond(u,t,int)
+        r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  # b1-SC distance 
+        return r - param3b.mu1 * 0.95
+    end
+
+    function early_flyby_cond(u,t,int)
+        r = sqrt((u[1] - param3b.as)^2 + u[2] ^2 + u[3]^2)  # b1-SC distance 
+        if abs(t) < 5
+            return r - param3b.mu1 
+        else 
+            return NaN 
+        end
+    end
+
 
     ### affect!
     terminate_affect!(int) = terminate!(int)
@@ -238,10 +249,10 @@ end
 
     ### Grid search parameters
     ### OPTION 1; grid generations
-    n = 60
-    m = 300
-    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi]   # this should be 1 but not 2pi!!!!!!!
+    m = 75
+    n = 20
+    ϕ_vec    = LinRange(0, 1, m+1)[1:m]  # [0.335103216] [0.0]    
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi]  
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
@@ -301,23 +312,24 @@ end
     ## affect!: upcrossing (neg->pos), affect_neg: downcrossing (pos->neg)
 
     # terminate condition 
-    periapsis_cb   = ContinuousCallback(periapsis_cond, terminate_affect!)
-    collision_cb   = ContinuousCallback(collision_cond, terminate_affect!; rootfind=false, save_positions=(false, true))
+    inside_cb      = ContinuousCallback(inside_lunar_radius_cond, terminate_affect!; rootfind=false, save_positions=(true, true))
+    early_fb_cb    = ContinuousCallback(early_flyby_cond, terminate_affect!; rootfind=false, save_positions=(true, true))    
 
     # logging condition 
     apoapsis_cb    = ContinuousCallback(apoapsis_cond, no_affect!; rootfind=false, save_positions=(false,true))
-    perilune_cb    = ContinuousCallback(perilune_cond, nothing, no_affect!; rootfind=false, save_positions=(true,false))
     lunar_rad_cb   = ContinuousCallback(lunar_radius_cond2, nothing, no_affect!; rootfind=false, save_positions=(true, false))
     
     # special case (turning off engine)
     ballistic_cb   = ContinuousCallback(switch2ballistic_cond, nothing, turn_off_engine_affect!; rootfind=false, save_positions=(true, false))
  
+    # periapsis_cb   = ContinuousCallback(periapsis_cond, terminate_affect!)
     # periapsis_cb = ContinuousCallback(periapsis_LEO_cond, terminate_affect!)
     # aps_cb       = ContinuousCallback(aps_cond, no_affect!; rootfind=false, save_positions=(false,true))
     # lunar_rad_cb = ContinuousCallback(lunar_radius_cond, nothing, no_affect!; rootfind=false, save_positions=(false, true))
     # wbs_cb         = ContinuousCallback(wbs_boundary_cond, turn_on_engine_affect!; rootfind=false, save_positions=(false,false))
 
-    cbs = CallbackSet(apoapsis_cb, periapsis_cb, perilune_cb, lunar_rad_cb, ballistic_cb, collision_cb)  # wbs_cb
+    cbs = CallbackSet(inside_cb, early_fb_cb, apoapsis_cb, lunar_rad_cb, ballistic_cb)  # wbs_cb
+
 
     svf_ = zeros(Float64, 1, 7)
     tspan = [0, -tof_bck]
@@ -380,7 +392,7 @@ for (i,sol) in enumerate(sim)
 
     # println(sol.t[end] > -tof_bck)
     
-    if sol.t[end] > -tof_bck
+    if 5 < abs(sol.t[end]) && abs(sol.t[end])  < tof_bck # && sol.retcode == :Success
         # println("sol $i : ", sol.retcode)
 
         # the terminal point (i.e., first (time backward) periapsis w.r.t. Earth) is in the range of LEO? 
@@ -389,176 +401,150 @@ for (i,sol) in enumerate(sim)
         θmf = pi - θsf
         θm0 = θmf + param3b.oml * sol.t[end]  # moon angle at the periapsis
         r_sc_earth = norm([r_entry[1] - param3b.as - (-param3b.mu2 * cos(θm0)), r_entry[2] - (-param3b.mu2 * sin(θm0)), r_entry[3]])
+        r_sc_b1    = norm([r_entry[1] - param3b.as, r_entry[2], r_entry[3]])
 
-        if earth_leo_lb < r_sc_earth && r_sc_earth < earth_leo_ub
+        # is the terminal point around the lunar radius? 
+        if r_sc_b1 < 1.05 && r_sc_b1 > 0.85
 
-            # Using Keplar 2 body problem, find the rp analytically
-            r_entry_EIne = SailorMoon.transform_sb1_to_EearthIne(r_entry, θm0, param3b.oml, param3b.mu2, param3b.as)
-            h_entry = cross(r_entry_EIne[1:3], r_entry_EIne[4:6])
+            
+            if perilune_cond(sol.u[end][1:6], sol.t[end], θmf) < 0.2
+            
+                plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
 
-            # we want SC to leave from Earth in CCW direction 
-            if h_entry[3] > 0.0
+            end 
 
-                coe_entry = cart2kep(r_entry_EIne, param3b.mu1)
-                sma, ecc, inc, OMEGA, omega, nu = coe_entry
+            # tof_tot = -sol.t[end] 
+            # t_vec = -sol.t
+            # # rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
+            # # x_rp = sol.u[end]
+
+            # # find apoapsis (relative to B1) 
+            # r_vec = sqrt.((hcat(sol.u...)[1,:] .- [param3b.as]).^2
+            #             .+ hcat(sol.u...)[2,:].^2
+            #             .+ hcat(sol.u...)[3,:].^2)
+
+            # ra, id_ra = findmax(r_vec)
+            # dt_ra = - sol.t[id_ra]
+            # dt_rp = tof_tot - dt_ra 
+
+            # x_ra    = sol.u[id_ra][1]
+            # y_ra    = sol.u[id_ra][2]
+            # z_ra    = sol.u[id_ra][3]
+            # xdot_ra = sol.u[id_ra][4]
+            # ydot_ra = sol.u[id_ra][5]
+            # zdot_ra = sol.u[id_ra][6]
+            # m_ra    = sol.u[id_ra][7]                   
+
+            # # # flag: lunar flyby? (cf. moon SOI = 66100 km)
+            # # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
+            # #             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
+            # #             +   hcat(sol.u...)[3,:].^2)
+            # # id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
+                    
+            # # if ~isempty(id_lfb)
+            # #     for k in id_lfb
+            # #         if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
+            # #             global lfb_count += 1
+            # #         end
+            # #     end    
+            # # end
+
+
+            # for (i, x) in enumerate(sol.u)
+            #     t = sol.t[i]
+            #     c1 = perilune_cond(x, t, pi-θsf)
+            #     c2 = lunar_radius_cond2(x, t, pi-θsf)
                 
-                # 06/15/2023: I don't like this if statement, but this is enevitable... 
-                if ecc < 1 + 1e-6
-                    rp_kep = sma * (1-ecc)
-                    ra_kep = sma * (1+ecc)
-                    
-                    # generate state @ periapsis
-                    state_rp = kep2cart([sma, ecc, inc, OMEGA, omega, 0.0], param3b.mu1)
-                    state_rp = SailorMoon.transform_EearthIne_to_sb1(state_rp, θm0, param3b.oml, param3b.mu2, param3b.as)
-                    # println("state_rp: ", state_rp)
+            #     # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
+            #     if  abs(c1) < 5e-2 
+            #         global lfb_count += 1
+            #     end
 
-                    # obtian the eccentric anomaly & mean anomaly at entrance
-                    cosE = (ecc + cos(nu)) / (1 + ecc*cos(nu))
-                    sinE = sqrt(1-ecc^2) * sin(nu) / (1 + cos(nu))
-                    E = atan(sinE, cosE)
-                    M = E - ecc*sin(E)
-                    n_ = sqrt(param3b.mu1 / sma^3) 
-                    tof_finale = abs(M / n_)
+            #     if abs(c2) < 3e-2
+            #         # println("watch out, lunar flyby is happening too early... ")
+            #         global flag = true 
+            #     end 
 
-                    tof_tot = -sol.t[end] + tof_finale
+            # end
 
-                    t_vec = -sol.t
-                    # rp = sqrt((sol.u[end][1]-param3b.as)^2 + sol.u[end][2]^2 + sol.u[end][3]^2)
-                    # x_rp = sol.u[end]
+            # if flag == false 
 
-                    # find apoapsis      
-                    # relative to Earth
-                    # r_vec = sqrt.((hcat(sol.u...)[1,:] .+ param3b.mu2.*cos.(θmf .+ param3b.oml .* sol.t) .- [param3b.as]).^2
-                    #             .+ (hcat(sol.u...)[2,:] .+ param3b.mu2.*sin.(θmf .+ param3b.oml .* sol.t)).^2
-                    #             .+  hcat(sol.u...)[3,:].^2)
-                    
-                    # relative to B1 
-                    r_vec = sqrt.((hcat(sol.u...)[1,:] .- [param3b.as]).^2
-                                .+ hcat(sol.u...)[2,:].^2
-                                .+ hcat(sol.u...)[3,:].^2)
+            #     r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
+            #     id_lunar_rad   = findmin(abs.(r_vec .- param3b.mu1))
+            #     id_lunar_rad   = id_lunar_rad[2]
+            #     x_l    = sol.u[id_lunar_rad][1]
+            #     y_l    = sol.u[id_lunar_rad][2]
+            #     z_l    = sol.u[id_lunar_rad][3]
+            #     xdot_l = sol.u[id_lunar_rad][4]
+            #     ydot_l = sol.u[id_lunar_rad][5]
+            #     zdot_l = sol.u[id_lunar_rad][6]
+            #     m_l    = sol.u[id_lunar_rad][7]  
+            #     t_lrad = -sol.t[id_lunar_rad]
 
-                    ra, id_ra = findmax(r_vec)
-                    dt_ra = - sol.t[id_ra]
-                    dt_rp = tof_tot - dt_ra 
+            #     # obtain α
+            #     θs0 = θsf - param3b.oms * tof_tot
+            #     θm0 = π - θs0
+            #     rE = [
+            #         param3b.as - param3b.mu2 * cos(θm0),
+            #         -param3b.mu2 * sin(θm0),
+            #         0.0
+            #     ]
 
-                    x_ra    = sol.u[id_ra][1]
-                    y_ra    = sol.u[id_ra][2]
-                    z_ra    = sol.u[id_ra][3]
-                    xdot_ra = sol.u[id_ra][4]
-                    ydot_ra = sol.u[id_ra][5]
-                    zdot_ra = sol.u[id_ra][6]
-                    m_ra    = sol.u[id_ra][7]                   
+            #     # r_sc - r_E
+            #     vec = state_rp[1:3] - rE 
+            #     x_unit = [1.0, 0.0, 0.0]
+            #     α = acos(dot(vec, x_unit) / norm(vec))  # velocity vector angle at rp 
 
-                    # # flag: lunar flyby? (cf. moon SOI = 66100 km)
-                    # rm_vec = sqrt.((hcat(sol.u...)[1,:] .- (1-param3b.mu2).*cos.(θmf .+ param3b.oml.*sol.t) .- [param3b.as]).^2
-                    #             +  (hcat(sol.u...)[2,:] .- (1-param3b.mu2).*sin.(θmf .+ param3b.oml.*sol.t)).^2
-                    #             +   hcat(sol.u...)[3,:].^2)
-                    # id_lfb = findall(rm_vec .< (66100 / param3b.lstar) .* t_vec .> (10*86400/param3b.tstar))
-                            
-                    # if ~isempty(id_lfb)
-                    #     for k in id_lfb
-                    #         if ~isnan(perilune_cond(sol.u[k], sol.t[k], pi - θsf))
-                    #             global lfb_count += 1
-                    #         end
-                    #     end    
-                    # end
+            #     if cross(x_unit, vec)[3] <= 0
+            #         α = -α
+            #     end
 
+            #     ϕ0  = grids[i][1]
+            #     ϵr  = grids[i][2]
+            #     ϵv  = grids[i][3]
+            #     x_ini = sol.u[1][1]
+            #     y_ini = sol.u[1][2]
+            #     z_ini = sol.u[1][3]
+            #     xdot_ini = sol.u[1][4]
+            #     ydot_ini = sol.u[1][5]
+            #     zdot_ini = sol.u[1][6]
+            #     m_ini = sol.u[1][7]
 
-                    for (i, x) in enumerate(sol.u)
-                        t = sol.t[i]
-                        c1 = perilune_cond(x, t, pi-θsf)
-                        c2 = lunar_radius_cond2(x, t, pi-θsf)
-                        
-                        # println("prilune cond: ", c1, " lunar rad cond: ", c2, " , t = ", t)
-                        if  abs(c1) < 5e-2 
-                            global lfb_count += 1
-                        end
+            #     x_rp = state_rp[1]
+            #     y_rp = state_rp[2]
+            #     z_rp = state_rp[3]
+            #     xdot_rp = state_rp[4]
+            #     ydot_rp = state_rp[5]
+            #     zdot_rp = state_rp[6]
+            #     m_rp = sol.u[end][7]
 
-                        if abs(c2) < 3e-2
-                            # println("watch out, lunar flyby is happening too early... ")
-                            global flag = true 
-                        end 
+            #     # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
+            #     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
 
-                    end
+            #     push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
+            #             rp_kep, ra_kep, α, 
+            #             ra, dt_ra, dt_rp, 
+            #             x_ini, y_ini, z_ini, xdot_ini, ydot_ini, zdot_ini, m_ini,
+            #             x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
+            #             x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
+            #             x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
+            #             tof_tot, lfb_count])
+            #     println("idx $i is a success!")
 
-                    if flag == false 
+            #     color = color_gradation[round(-sol.t[end])]
+            #     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
 
-                        r_vec[1:id_ra] = 100 * ones(Float64, (1,id_ra)) # dummy variables so that the id_lunar_rad occurs after the apoapsis
-                        id_lunar_rad   = findmin(abs.(r_vec .- param3b.mu1))
-                        id_lunar_rad   = id_lunar_rad[2]
-                        x_l    = sol.u[id_lunar_rad][1]
-                        y_l    = sol.u[id_lunar_rad][2]
-                        z_l    = sol.u[id_lunar_rad][3]
-                        xdot_l = sol.u[id_lunar_rad][4]
-                        ydot_l = sol.u[id_lunar_rad][5]
-                        zdot_l = sol.u[id_lunar_rad][6]
-                        m_l    = sol.u[id_lunar_rad][7]  
-                        t_lrad = -sol.t[id_lunar_rad]
+            #     global id += 1
 
-                        # obtain α
-                        θs0 = θsf - param3b.oms * tof_tot
-                        θm0 = π - θs0
-                        rE = [
-                            param3b.as - param3b.mu2 * cos(θm0),
-                            -param3b.mu2 * sin(θm0),
-                            0.0
-                        ]
+            #     # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
 
-                        # r_sc - r_E
-                        vec = state_rp[1:3] - rE 
-                        x_unit = [1.0, 0.0, 0.0]
-                        α = acos(dot(vec, x_unit) / norm(vec))  # velocity vector angle at rp 
-
-                        if cross(x_unit, vec)[3] <= 0
-                            α = -α
-                        end
-
-                        ϕ0  = grids[i][1]
-                        ϵr  = grids[i][2]
-                        ϵv  = grids[i][3]
-                        x_ini = sol.u[1][1]
-                        y_ini = sol.u[1][2]
-                        z_ini = sol.u[1][3]
-                        xdot_ini = sol.u[1][4]
-                        ydot_ini = sol.u[1][5]
-                        zdot_ini = sol.u[1][6]
-                        m_ini = sol.u[1][7]
-
-                        x_rp = state_rp[1]
-                        y_rp = state_rp[2]
-                        z_rp = state_rp[3]
-                        xdot_rp = state_rp[4]
-                        ydot_rp = state_rp[5]
-                        zdot_rp = state_rp[6]
-                        m_rp = sol.u[end][7]
-
-                        # scatter!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=:blue, shape=:circle, markersize=2.0, label="event?")
-                        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:])
-
-                        push!(df, [id, ϕ0, ϵr, ϵv, θsf, 
-                                rp_kep, ra_kep, α, 
-                                ra, dt_ra, dt_rp, 
-                                x_ini, y_ini, z_ini, xdot_ini, ydot_ini, zdot_ini, m_ini,
-                                x_ra, y_ra, z_ra, xdot_ra, ydot_ra, zdot_ra, m_ra,
-                                x_rp, y_rp, z_rp, xdot_rp, ydot_rp, zdot_rp, m_rp,
-                                x_l, y_l, z_l, xdot_l, ydot_l, zdot_l, m_l, t_lrad,
-                                tof_tot, lfb_count])
-                        println("idx $i is a success!")
-
-                        color = color_gradation[round(-sol.t[end])]
-                        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], color=color, label="", linewidth=0.8)
-
-                        global id += 1
-
-                        plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
-
-                    end
-                end
-            end
+            # end
         end
+
+        # plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
+
     end
 
-    plot!(ptraj, hcat(sol.u...)[1,:], hcat(sol.u...)[2,:], label="", linewidth=0.8)
 
 end
 
@@ -568,7 +554,7 @@ plot!(ptraj, circle[1,:], circle[2,:], label="")
 display(ptraj)
 
 # print(df)
-CSV.write(out_fname, df)
+# CSV.write(out_fname, df)
 
 
 

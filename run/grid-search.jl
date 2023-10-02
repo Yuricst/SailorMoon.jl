@@ -240,8 +240,8 @@ end
     ### OPTION 1; grid generations
     n = 60
     m = 300
-    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    
-    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi]   # this should be 1 but not 2pi!!!!!!!
+    ϕ_vec    = LinRange(0, 2*pi, m+1)[1:m]  # [0.335103216] [0.0]    # this should be 1 but not 2pi!!!!!!!
+    θs_vec   = LinRange(0, 2*pi, n+1)[1:n]  # [0.104719755] [180/180*pi]   
     epsr_vec = 10.0 .^(-5)
     epsv_vec = 10.0 .^(-5)
     tof_bck  = 120 * 86400 / param3b.tstar
